@@ -1,0 +1,513 @@
+openapi: 3.0.0
+info:
+  title: Gestión Parqueadero API
+  description: API para la gestión de un sistema de parqueadero (vehículos, tickets, tarifas, espacios).
+  version: 1.0.0
+servers:
+  - url: http://localhost:8082
+    description: Servidor Local
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Auth DTOs
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+
+    # Parqueadero DTOs
+    EntradaRequest:
+      type: object
+      properties:
+        placa:
+          type: string
+        tipoVehiculo:
+          type: string
+          enum: [CARRO, MOTO, BICICLETA]
+        tipoTarifa:
+          type: string
+          enum: [POR_MINUTO, POR_HORA, POR_DIA, POR_MES]
+    
+    SalidaRequest:
+      type: object
+      properties:
+        codigoTicket:
+          type: string
+        placa:
+          type: string
+        observaciones:
+          type: string
+
+    TicketDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        codigo:
+          type: string
+        vehiculo:
+          $ref: '#/components/schemas/VehiculoDTO'
+        espacio:
+          $ref: '#/components/schemas/EspacioDTO'
+        horaEntrada:
+          type: string
+          format: date-time
+        horaSalida:
+          type: string
+          format: date-time
+        tipoTarifa:
+          type: string
+        valorBase:
+          type: number
+        valorAdicional:
+          type: number
+        descuento:
+          type: number
+        valorTotal:
+          type: number
+        estado:
+          type: string
+        observaciones:
+          type: string
+
+    PagoResponse:
+      type: object
+      properties:
+        codigoTicket:
+          type: string
+        horaEntrada:
+          type: string
+          format: date-time
+        horaSalida:
+          type: string
+          format: date-time
+        duracionHoras:
+          type: integer
+          format: int64
+        duracionMinutos:
+          type: integer
+          format: int64
+        valorBase:
+          type: number
+        valorAdicional:
+          type: number
+        descuento:
+          type: number
+        valorTotal:
+          type: number
+        mensaje:
+          type: string
+
+    EspacioDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        codigo:
+          type: string
+        tipoVehiculoPermitido:
+          type: string
+        estado:
+          type: string
+        tarifaBase:
+          type: number
+        ocupado:
+          type: boolean
+
+    TarifaDTO:
+      type: object
+      properties:
+        tipoTarifa:
+          type: string
+        valor:
+          type: number
+
+    EstadisticasDTO:
+      type: object
+      properties:
+        vehiculosActivos:
+          type: integer
+          format: int64
+        espaciosDisponibles:
+          type: integer
+          format: int64
+        espaciosOcupados:
+          type: integer
+          format: int64
+        ingresosHoy:
+          type: number
+        ingresosMes:
+          type: number
+        ticketsHoy:
+          type: integer
+          format: int64
+        ticketsMes:
+          type: integer
+          format: int64
+
+    AgregarEspaciosRequest:
+      type: object
+      properties:
+        tipoVehiculo:
+          type: string
+        cantidad:
+          type: integer
+        tarifaBase:
+          type: number
+
+    EliminarEspaciosRequest:
+      type: object
+      properties:
+        tipoVehiculo:
+          type: string
+        cantidad:
+          type: integer
+
+    # Vehiculo DTOs
+    VehiculoDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        placa:
+          type: string
+        tipo:
+          type: string
+        marca:
+          type: string
+        modelo:
+          type: string
+        color:
+          type: string
+        nombrePropietario:
+          type: string
+        telefonoPropietario:
+          type: string
+        fechaRegistro:
+          type: string
+          format: date-time
+
+    # Entity Tarifa (usado en TarifaController)
+    Tarifa:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        tipoTarifa:
+          type: string
+          enum: [POR_MINUTO, POR_HORA, POR_DIA, POR_MES]
+        valor:
+          type: number
+
+security:
+  - bearerAuth: []
+
+paths:
+  # --- Auth Controller ---
+  /api/auth/register:
+    post:
+      summary: Registrar nuevo usuario
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Usuario registrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '409':
+          description: El usuario ya existe
+
+  /api/auth/login:
+    post:
+      summary: Iniciar sesión
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  # --- Parqueadero Controller ---
+  /api/parqueadero/entrada:
+    post:
+      summary: Registrar entrada de vehículo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntradaRequest'
+      responses:
+        '200':
+          description: Entrada registrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDTO'
+
+  /api/parqueadero/salida:
+    post:
+      summary: Registrar salida de vehículo y calcular pago
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalidaRequest'
+      responses:
+        '200':
+          description: Salida registrada y pago calculado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagoResponse'
+
+  /api/parqueadero/tickets/{codigo}:
+    get:
+      summary: Obtener ticket por código
+      parameters:
+        - name: codigo
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalle del ticket
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDTO'
+
+  /api/parqueadero/tickets/activos:
+    get:
+      summary: Listar tickets activos
+      responses:
+        '200':
+          description: Lista de tickets activos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TicketDTO'
+
+  /api/parqueadero/tarifas:
+    get:
+      summary: Listar tarifas globales (DTO)
+      responses:
+        '200':
+          description: Lista de tarifas globales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TarifaDTO'
+
+  /api/parqueadero/espacios:
+    get:
+      summary: Listar todos los espacios
+      responses:
+        '200':
+          description: Lista de espacios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EspacioDTO'
+
+  /api/parqueadero/estadisticas:
+    get:
+      summary: Obtener estadísticas del parqueadero
+      responses:
+        '200':
+          description: Estadísticas actuales
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstadisticasDTO'
+
+  /api/parqueadero/espacios/agregar:
+    post:
+      summary: Agregar nuevos espacios (Admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgregarEspaciosRequest'
+      responses:
+        '200':
+          description: Espacios creados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EspacioDTO'
+
+  /api/parqueadero/espacios/eliminar:
+    delete:
+      summary: Eliminar espacios disponibles (Admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EliminarEspaciosRequest'
+      responses:
+        '200':
+          description: Espacios eliminados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EspacioDTO'
+
+  # --- Vehiculo Controller ---
+  /api/vehiculos:
+    get:
+      summary: Listar vehículos (opcionalmente filtrar por placa)
+      parameters:
+        - name: placa
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de vehículos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehiculoDTO'
+    post:
+      summary: Registrar nuevo vehículo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehiculoDTO'
+      responses:
+        '201':
+          description: Vehículo creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehiculoDTO'
+
+  /api/vehiculos/{placa}:
+    get:
+      summary: Obtener vehículo por placa
+      parameters:
+        - name: placa
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalle del vehículo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehiculoDTO'
+
+  /api/vehiculos/{id}:
+    put:
+      summary: Actualizar vehículo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehiculoDTO'
+      responses:
+        '200':
+          description: Vehículo actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehiculoDTO'
+
+  # --- Tarifa Controller ---
+  /api/tarifas:
+    get:
+      summary: Listar todas las tarifas (Entidad completa)
+      responses:
+        '200':
+          description: Lista de tarifas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tarifa'
+    post:
+      summary: Guardar o actualizar tarifa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tarifa'
+      responses:
+        '200':
+          description: Tarifa guardada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarifa'
