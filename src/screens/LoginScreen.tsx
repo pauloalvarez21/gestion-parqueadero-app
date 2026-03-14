@@ -15,7 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import api from '../services/api';
+import { useAuthStore } from '../store/useAuthStore';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -23,7 +23,7 @@ export default function LoginScreen() {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { login, isLoading } = useAuthStore();
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -31,26 +31,15 @@ export default function LoginScreen() {
       return;
     }
 
-    setLoading(true);
-
     try {
-      const response = await api.post('/api/auth/login', {
-        username,
-        password,
-      });
-
-      // Guardar token
-      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-
+      await login(username, password);
       Alert.alert('Éxito', 'Bienvenido');
       navigation.navigate('Home');
     } catch (error: any) {
       Alert.alert(
         'Error de autenticación',
-        error?.response?.data?.message || 'Usuario o contraseña incorrectos'
+        error?.response?.data?.message || error.message || 'No se pudo conectar con el servidor'
       );
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -92,11 +81,11 @@ export default function LoginScreen() {
               />
 
               <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
+                style={[styles.button, isLoading && styles.buttonDisabled]}
                 onPress={handleLogin}
-                disabled={loading}
+                disabled={isLoading}
               >
-                {loading ? (
+                {isLoading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text style={styles.buttonText}>Ingresar</Text>
