@@ -7,7 +7,7 @@ interface HomeScreenProps {
   navigation: any;
 }
 
-export default function HomeScreen({ navigation }: HomeScreenProps) {
+const HomeScreen = ({ navigation }: HomeScreenProps) => {
   const { logout, user, role } = useAuthStore();
 
   // 2. Filtrar opciones según el rol del usuario actual
@@ -139,3 +139,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+export default HomeScreen;

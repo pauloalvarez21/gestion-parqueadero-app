@@ -19,30 +19,23 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import api from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
-type EntryScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Entrada'>;
+type ExitScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Salida'>;
 
-const EntryScreen = () => {
-  const navigation = useNavigation<EntryScreenNavigationProp>();
-  const [plate, setPlate] = useState('');
-  // Estados para los nuevos campos requeridos por el backend
-  const [tipoVehiculo, setTipoVehiculo] = useState<'CARRO' | 'MOTO' | 'BICICLETA'>('CARRO');
-  const [tipoTarifa, setTipoTarifa] = useState<'POR_MINUTO' | 'POR_HORA' | 'POR_DIA' | 'POR_MES'>('POR_HORA');
+const ExitScreen = () => {
+  const navigation = useNavigation<ExitScreenNavigationProp>();
+  const [placa, setPlaca] = useState('');
+  const [codigoTicket, setCodigoTicket] = useState('');
+  const [observaciones, setObservaciones] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Mismo manejo de placa que EntryScreen
   const handlePlateChange = (text: string) => {
-    // Esta función formatea la placa automáticamente a 'AAA-123'
-    // Limpia la entrada para permitir solo letras y números
     const cleaned = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
-
-    // Limita la longitud a 6 caracteres (sin contar el guion)
-    if (cleaned.length > 6) {
-      return;
-    }
-
+    if (cleaned.length > 6) return;
     if (cleaned.length > 3) {
-      setPlate(`${cleaned.slice(0, 3)}-${cleaned.slice(3)}`);
+      setPlaca(`${cleaned.slice(0, 3)}-${cleaned.slice(3)}`);
     } else {
-      setPlate(cleaned);
+      setPlaca(cleaned);
     }
   };
 
@@ -85,9 +78,6 @@ const EntryScreen = () => {
       const uri = result.assets[0].uri;
       if (uri) {
         const recognizedText = await TextRecognition.recognize(uri);
-
-        // Buscamos algo que parezca una placa (3 letras seguidas de 3 o 4 números)
-        // El regex busca patrones como AAA-123 o AAA123
         const plateRegex = /[A-Z]{3}[-]?[0-9]{3,4}/;
         const found = recognizedText.find((text) => plateRegex.test(text.toUpperCase()));
 
@@ -104,40 +94,39 @@ const EntryScreen = () => {
     }
   };
 
-  const handleRegisterEntry = async () => {
-    if (!plate.trim() && tipoVehiculo !== 'BICICLETA') {
-      Alert.alert('Error', 'Por favor ingresa la placa del vehículo');
-      return;
-    }
-
-    // Validación de longitud sobre la placa formateada (7 caracteres)
-    if (tipoVehiculo !== 'BICICLETA' && plate.length !== 7) {
-      Alert.alert('Error', 'La placa no tiene el formato correcto (ej: AAA-123).');
+  const handleRegisterExit = async () => {
+    if (!placa.trim() && !codigoTicket.trim()) {
+      Alert.alert('Error', 'Por favor ingresa la placa del vehículo o el código del ticket');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await api.post('/api/parqueadero/entrada', {
-        placa: tipoVehiculo === 'BICICLETA' ? 'BICI' : plate.toUpperCase(),
-        tipoVehiculo,
-        tipoTarifa,
+      const response = await api.post('/api/parqueadero/salida', {
+        placa: placa ? placa.toUpperCase().trim() : undefined,
+        codigoTicket: codigoTicket ? codigoTicket.trim() : undefined,
+        observaciones: observaciones ? observaciones.trim() : '',
       });
 
-      setPlate(''); // Limpiar formulario
+      setPlaca('');
+      setCodigoTicket('');
+      setObservaciones('');
+
+      const { valorTotal, duracionHoras, duracionMinutos, mensaje } = response.data;
+
       Alert.alert(
-        'Éxito',
-        `Entrada registrada.\nTicket: ${response.data.codigo || 'N/A'}`,
+        'Salida Registrada',
+        `Mensaje: ${mensaje || 'Pago calculado'}\nTiempo: ${duracionHoras}h ${duracionMinutos}m\nTotal a cobrar: $${valorTotal}`,
         [
           { text: 'Aceptar', onPress: () => navigation.goBack() }
         ],
         { cancelable: false }
       );
     } catch (error: any) {
-      console.error('Error al registrar entrada:', error);
+      console.error('Error al registrar salida:', error);
       Alert.alert(
         'Error',
-        error.response?.data?.message || 'No se pudo registrar la entrada'
+        error.response?.data?.message || 'No se pudo registrar la salida'
       );
     } finally {
       setLoading(false);
@@ -148,73 +137,63 @@ const EntryScreen = () => {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.title}>Nueva Entrada</Text>
-          <Text style={styles.subtitle}>Ingresa los datos del vehículo</Text>
-
-          <View style={styles.selectorContainer}>
-            <Text style={styles.label}>Tipo de Vehículo</Text>
-            <View style={styles.optionsRow}>
-              {(['CARRO', 'MOTO', 'BICICLETA'] as const).map((tipo) => (
-                <TouchableOpacity
-                  key={tipo}
-                  style={[styles.optionButton, tipoVehiculo === tipo && styles.optionSelected]}
-                  onPress={() => setTipoVehiculo(tipo)}
-                >
-                  <Text style={[styles.optionText, tipoVehiculo === tipo && styles.optionTextSelected]}>{tipo}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.selectorContainer}>
-            <Text style={styles.label}>Tipo de Tarifa</Text>
-            <View style={styles.optionsRow}>
-              {(['POR_HORA', 'POR_DIA', 'POR_MES'] as const).map((tipo) => (
-                <TouchableOpacity
-                  key={tipo}
-                  style={[styles.optionButton, tipoTarifa === tipo && styles.optionSelected]}
-                  onPress={() => setTipoTarifa(tipo)}
-                >
-                  <Text style={[styles.optionText, tipoTarifa === tipo && styles.optionTextSelected]}>
-                    {tipo.replace('POR_', '')}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          <Text style={styles.title}>Registrar Salida</Text>
+          <Text style={styles.subtitle}>Escanea la placa o ingresa el ticket</Text>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Placa del Vehículo</Text>
             <View style={styles.inputRow}>
               <TextInput
                 style={styles.input}
-                value={plate}
+                value={placa}
                 onChangeText={handlePlateChange}
                 placeholder="AAA-123"
                 placeholderTextColor="#ccc"
                 autoCapitalize="characters"
                 autoCorrect={false}
-                editable={tipoVehiculo !== 'BICICLETA'}
                 maxLength={7}
               />
-
-              {tipoVehiculo !== 'BICICLETA' && (
-                <TouchableOpacity style={styles.cameraButton} onPress={handleScanPlate}>
-                  <Text style={styles.cameraIcon}>📷</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity style={styles.cameraButton} onPress={handleScanPlate}>
+                <Text style={styles.cameraIcon}>📷</Text>
+              </TouchableOpacity>
             </View>
+          </View>
+
+          <Text style={styles.orText}>- Ó -</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Código del Ticket</Text>
+            <TextInput
+              style={styles.inputFull}
+              value={codigoTicket}
+              onChangeText={setCodigoTicket}
+              placeholder="Ej: TKT-123456"
+              placeholderTextColor="#ccc"
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Observaciones (opcional)</Text>
+            <TextInput
+              style={styles.inputFull}
+              value={observaciones}
+              onChangeText={setObservaciones}
+              placeholder="Ej: Abolladura en la puerta..."
+              placeholderTextColor="#ccc"
+            />
           </View>
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleRegisterEntry}
+            onPress={handleRegisterExit}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Registrar Ingreso 🚗</Text>
+              <Text style={styles.buttonText}>Registrar Salida 🏁</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -251,39 +230,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 30,
-  },
-  selectorContainer: {
     marginBottom: 20,
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 8,
-  },
-  optionButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-  },
-  optionSelected: {
-    backgroundColor: '#007AFF',
-  },
-  optionText: {
-    color: '#007AFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  optionTextSelected: {
-    color: '#fff',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 15,
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#444',
     marginBottom: 8,
@@ -298,16 +251,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
-    padding: 15,
-    fontSize: 18,
+    padding: 12,
+    fontSize: 16,
     color: '#333',
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  inputFull: {
+    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#333',
+  },
   cameraButton: {
     marginLeft: 10,
     backgroundColor: '#007AFF',
-    padding: 15,
+    padding: 12,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -316,8 +278,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#fff',
   },
+  orText: {
+    textAlign: 'center',
+    color: '#999',
+    marginVertical: 10,
+    fontWeight: 'bold',
+  },
   button: {
-    backgroundColor: '#28a745', // Color verde de "éxito"
+    backgroundColor: '#007AFF', 
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -333,4 +301,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default EntryScreen;
+export default ExitScreen;

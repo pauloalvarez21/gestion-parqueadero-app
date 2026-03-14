@@ -26,21 +26,19 @@ export const useAuthStore = create<AuthState>((set) => ({
         password,
       });
 
-      console.log('Datos recibidos del Login:', response.data);
-
       const token = response.data.token;
       // Asumiendo que el campo se llama 'role' o 'rol' en el JSON
-      const role = response.data.role || response.data.rol || 'USER'; 
-      
+      const role = response.data.role || response.data.rol || 'USER';
+
       // Configurar el token en los headers de axios globalmente
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      set({ 
-        token, 
-        user: username, 
+      set({
+        token,
+        user: username,
         role,
-        isAuthenticated: true, 
-        isLoading: false 
+        isAuthenticated: true,
+        isLoading: false
       });
     } catch (error: any) {
       console.error('Error al intentar hacer login:', error.isAxiosError ? error.toJSON() : error);
