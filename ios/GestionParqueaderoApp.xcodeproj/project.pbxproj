@@ -13,6 +13,8 @@
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		932BC746FC2EB00B71A592FB /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		AFA93B8D218B4821A92E7ECA /* BootSplash.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 15C655FD831748E1ABFEBAD1 /* BootSplash.storyboard */; };
+		523254E1363A49F8A29A7A39 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D2B9CBB31D7B4C5098FE3BE3 /* Colors.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +29,8 @@
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = GestionParqueaderoApp/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = GestionParqueaderoApp/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		15C655FD831748E1ABFEBAD1 /* BootSplash.storyboard */ = {isa = PBXFileReference; name = "BootSplash.storyboard"; path = "GestionParqueaderoApp/BootSplash.storyboard"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		D2B9CBB31D7B4C5098FE3BE3 /* Colors.xcassets */ = {isa = PBXFileReference; name = "Colors.xcassets"; path = "GestionParqueaderoApp/Colors.xcassets"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = folder.assetcatalog; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,6 +54,8 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				15C655FD831748E1ABFEBAD1 /* BootSplash.storyboard */,
+				D2B9CBB31D7B4C5098FE3BE3 /* Colors.xcassets */,
 			);
 			name = GestionParqueaderoApp;
 			sourceTree = "<group>";
@@ -165,6 +171,8 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				932BC746FC2EB00B71A592FB /* PrivacyInfo.xcprivacy in Resources */,
+				AFA93B8D218B4821A92E7ECA /* BootSplash.storyboard in Resources */,
+				523254E1363A49F8A29A7A39 /* Colors.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -16,6 +16,7 @@ import api from '../services/api';
 
 interface TarifaDTO {
   id?: number;
+  tipoVehiculo: string;
   tipoTarifa: string;
   valor: number;
 }
@@ -26,6 +27,7 @@ const TariffsScreen = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   // Estados para el formulario de creación/edición
+  const [selectedVehiculo, setSelectedVehiculo] = useState<string>('CARRO');
   const [selectedTipo, setSelectedTipo] = useState<string>('POR_HORA');
   const [valor, setValor] = useState('');
 
@@ -59,6 +61,7 @@ const TariffsScreen = () => {
     try {
       setActionLoading(true);
       const payload = {
+        tipoVehiculo: selectedVehiculo,
         tipoTarifa: selectedTipo,
         valor: parseFloat(valor),
       };
@@ -77,10 +80,10 @@ const TariffsScreen = () => {
     }
   };
 
-  const handleDeleteTarifa = (tipo: string) => {
+  const handleDeleteTarifa = (tipoVehiculo: string, tipoTarifa: string) => {
     Alert.alert(
       'Eliminar Tarifa',
-      `¿Estás seguro de que deseas eliminar la tarifa ${tipo.replace('POR_', '')}?`,
+      `¿Estás seguro de que deseas eliminar la tarifa ${tipoTarifa.replace('POR_', '')} para ${tipoVehiculo}?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -89,7 +92,7 @@ const TariffsScreen = () => {
           onPress: async () => {
             try {
               setActionLoading(true);
-              await api.delete(`/api/parqueadero/tarifas/${tipo}`);
+              await api.delete(`/api/parqueadero/tarifas/${tipoVehiculo}/${tipoTarifa}`);
               Alert.alert('Éxito', 'Tarifa eliminada.');
               fetchTarifas();
             } catch (error: any) {
@@ -103,6 +106,7 @@ const TariffsScreen = () => {
     );
   };
 
+  const tiposVehiculo = ['CARRO', 'MOTO', 'CAMION', 'BICICLETA'];
   const tiposDisponibles = ['POR_MINUTO', 'POR_HORA', 'POR_DIA', 'POR_MES', 'FRACCION'];
 
   return (
@@ -117,6 +121,25 @@ const TariffsScreen = () => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Configurar Tarifas 💰</Text>
             
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Tipo de Vehículo</Text>
+              <View style={styles.optionsRow}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+                  {tiposVehiculo.map((v) => (
+                    <TouchableOpacity
+                      key={v}
+                      style={[styles.optionButton, selectedVehiculo === v && styles.optionSelected]}
+                      onPress={() => setSelectedVehiculo(v)}
+                    >
+                      <Text style={[styles.optionText, selectedVehiculo === v && styles.optionTextSelected]}>
+                        {v}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Tipo de Tarifa</Text>
               <View style={styles.optionsRow}>
@@ -168,12 +191,13 @@ const TariffsScreen = () => {
               tarifas.map((t, index) => (
                 <View key={t.id?.toString() || index.toString()} style={styles.tariffRow}>
                   <View style={styles.tariffInfo}>
+                    <Text style={styles.vehicleLabel}>{t.tipoVehiculo}</Text>
                     <Text style={styles.tariffLabel}>{t.tipoTarifa.replace('POR_', '')}</Text>
                     <Text style={styles.tariffValue}>${t.valor.toLocaleString()}</Text>
                   </View>
                   <TouchableOpacity
                     style={styles.deleteBtn}
-                    onPress={() => handleDeleteTarifa(t.tipoTarifa)}
+                    onPress={() => handleDeleteTarifa(t.tipoVehiculo, t.tipoTarifa)}
                   >
                     <Text style={styles.deleteBtnText}>🗑️</Text>
                   </TouchableOpacity>
@@ -286,6 +310,12 @@ const styles = StyleSheet.create({
   },
   tariffInfo: {
     flex: 1,
+  },
+  vehicleLabel: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: 'bold',
+    marginBottom: 2,
   },
   tariffLabel: {
     fontSize: 14,

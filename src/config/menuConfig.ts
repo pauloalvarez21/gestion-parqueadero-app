@@ -57,11 +57,4 @@ export const MENU_OPTIONS = [
     roles: ['ADMIN'],
     route: 'Estadisticas',
   },
-  {
-    id: 'docs',
-    title: 'Documentación API',
-    icon: '📄', // bi-file-earmark-code
-    roles: ['ADMIN', 'OPERADOR', 'USER'],
-    route: 'Documentacion',
-  },
 ];

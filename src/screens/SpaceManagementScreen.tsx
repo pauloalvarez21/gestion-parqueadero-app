@@ -29,12 +29,12 @@ const SpaceManagementScreen = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   // Estados para agregar
-  const [tipoAgregar, setTipoAgregar] = useState<'CARRO' | 'MOTO' | 'BICICLETA'>('CARRO');
+  const [tipoAgregar, setTipoAgregar] = useState<'CARRO' | 'MOTO' | 'CAMION' | 'BICICLETA'>('CARRO');
   const [cantidadAgregar, setCantidadAgregar] = useState('');
   const [tarifaBase, setTarifaBase] = useState('');
 
   // Estados para eliminar
-  const [tipoEliminar, setTipoEliminar] = useState<'CARRO' | 'MOTO' | 'BICICLETA'>('CARRO');
+  const [tipoEliminar, setTipoEliminar] = useState<'CARRO' | 'MOTO' | 'CAMION' | 'BICICLETA'>('CARRO');
   const [cantidadEliminar, setCantidadEliminar] = useState('');
 
   const fetchEspacios = async () => {
@@ -128,6 +128,7 @@ const SpaceManagementScreen = () => {
     const summary = {
       CARRO: { total: 0, disponible: 0, ocupado: 0 },
       MOTO: { total: 0, disponible: 0, ocupado: 0 },
+      CAMION: { total: 0, disponible: 0, ocupado: 0 },
       BICICLETA: { total: 0, disponible: 0, ocupado: 0 },
     };
 
@@ -187,8 +188,8 @@ const SpaceManagementScreen = () => {
             
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Tipo de Vehículo</Text>
-              <View style={styles.optionsRow}>
-                {(['CARRO', 'MOTO', 'BICICLETA'] as const).map((t) => (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsRow}>
+                {(['CARRO', 'MOTO', 'CAMION', 'BICICLETA'] as const).map((t) => (
                   <TouchableOpacity
                     key={t}
                     style={[styles.optionButton, tipoAgregar === t && styles.optionSelected]}
@@ -197,7 +198,7 @@ const SpaceManagementScreen = () => {
                     <Text style={[styles.optionText, tipoAgregar === t && styles.optionTextSelected]}>{t}</Text>
                   </TouchableOpacity>
                 ))}
-              </View>
+              </ScrollView>
             </View>
 
             <View style={styles.row}>
@@ -238,8 +239,8 @@ const SpaceManagementScreen = () => {
             
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Tipo de Vehículo</Text>
-              <View style={styles.optionsRow}>
-                {(['CARRO', 'MOTO', 'BICICLETA'] as const).map((t) => (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsRow}>
+                {(['CARRO', 'MOTO', 'CAMION', 'BICICLETA'] as const).map((t) => (
                   <TouchableOpacity
                     key={t}
                     style={[styles.optionButton, tipoEliminar === t && styles.optionSelectedDelete]}
@@ -248,7 +249,7 @@ const SpaceManagementScreen = () => {
                     <Text style={[styles.optionText, tipoEliminar === t && styles.optionTextSelected]}>{t}</Text>
                   </TouchableOpacity>
                 ))}
-              </View>
+              </ScrollView>
             </View>
 
             <View style={styles.inputGroup}>
@@ -275,7 +276,7 @@ const SpaceManagementScreen = () => {
           <View style={[styles.card, { marginTop: 20 }]}>
             <Text style={styles.cardTitle}>Mapa de Espacios 🗺️</Text>
             
-            {(['CARRO', 'MOTO', 'BICICLETA'] as const).map((tipo) => (
+            {(['CARRO', 'MOTO', 'CAMION', 'BICICLETA'] as const).map((tipo) => (
               <View key={tipo} style={styles.typeSection}>
                 <Text style={styles.typeHeader}>{tipo}</Text>
                 <View style={styles.grid}>

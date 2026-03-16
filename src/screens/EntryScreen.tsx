@@ -10,7 +10,8 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   PermissionsAndroid,
-  Platform
+  Platform,
+  ScrollView
 } from 'react-native';
 import { launchCamera } from 'react-native-image-picker';
 import TextRecognition from 'react-native-text-recognition';
@@ -25,8 +26,8 @@ const EntryScreen = () => {
   const navigation = useNavigation<EntryScreenNavigationProp>();
   const [plate, setPlate] = useState('');
   // Estados para los nuevos campos requeridos por el backend
-  const [tipoVehiculo, setTipoVehiculo] = useState<'CARRO' | 'MOTO' | 'BICICLETA'>('CARRO');
-  const [tipoTarifa, setTipoTarifa] = useState<'POR_MINUTO' | 'POR_HORA' | 'POR_DIA' | 'POR_MES'>('POR_HORA');
+  const [tipoVehiculo, setTipoVehiculo] = useState<'CARRO' | 'MOTO' | 'CAMION' | 'BICICLETA'>('CARRO');
+  const [tipoTarifa, setTipoTarifa] = useState<'POR_MINUTO' | 'POR_HORA' | 'POR_DIA' | 'POR_MES' | 'FRACCION'>('POR_HORA');
   const [loading, setLoading] = useState(false);
 
   const handlePlateChange = (text: string) => {
@@ -153,8 +154,8 @@ const EntryScreen = () => {
 
           <View style={styles.selectorContainer}>
             <Text style={styles.label}>Tipo de Vehículo</Text>
-            <View style={styles.optionsRow}>
-              {(['CARRO', 'MOTO', 'BICICLETA'] as const).map((tipo) => (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsRow}>
+              {(['CARRO', 'MOTO', 'CAMION', 'BICICLETA'] as const).map((tipo) => (
                 <TouchableOpacity
                   key={tipo}
                   style={[styles.optionButton, tipoVehiculo === tipo && styles.optionSelected]}
@@ -163,13 +164,13 @@ const EntryScreen = () => {
                   <Text style={[styles.optionText, tipoVehiculo === tipo && styles.optionTextSelected]}>{tipo}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           </View>
 
           <View style={styles.selectorContainer}>
             <Text style={styles.label}>Tipo de Tarifa</Text>
-            <View style={styles.optionsRow}>
-              {(['POR_HORA', 'POR_DIA', 'POR_MES'] as const).map((tipo) => (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsRow}>
+              {(['POR_MINUTO', 'POR_HORA', 'POR_DIA', 'POR_MES', 'FRACCION'] as const).map((tipo) => (
                 <TouchableOpacity
                   key={tipo}
                   style={[styles.optionButton, tipoTarifa === tipo && styles.optionSelected]}
@@ -180,7 +181,7 @@ const EntryScreen = () => {
                   </Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           </View>
 
           <View style={styles.inputContainer}>
@@ -258,8 +259,9 @@ const styles = StyleSheet.create({
   },
   optionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     marginTop: 8,
+    gap: 10,
+    paddingRight: 20,
   },
   optionButton: {
     paddingVertical: 10,

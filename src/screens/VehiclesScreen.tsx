@@ -34,7 +34,7 @@ const VehiclesScreen = () => {
 
   // Estados para nuevo vehículo
   const [newPlaca, setNewPlaca] = useState('');
-  const [newTipo, setNewTipo] = useState<'CARRO' | 'MOTO' | 'BICICLETA'>('CARRO');
+  const [newTipo, setNewTipo] = useState<'CARRO' | 'MOTO' | 'CAMION' | 'BICICLETA'>('CARRO');
   const [newMarca, setNewMarca] = useState('');
   const [newModelo, setNewModelo] = useState('');
   const [newNombrePropietario, setNewNombrePropietario] = useState('');
@@ -164,17 +164,17 @@ const VehiclesScreen = () => {
               </View>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Tipo</Text>
-                <View style={styles.optionsRow}>
-                  {(['CARRO', 'MOTO', 'BICICLETA'] as const).map((t) => (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsRow}>
+                  {(['CARRO', 'MOTO', 'CAMION', 'BICICLETA'] as const).map((t) => (
                     <TouchableOpacity
                       key={t}
-                      style={[styles.optionButton, newTipo === t && styles.optionSelected]}
+                      style={[styles.optionButton, newTipo === t && styles.optionSelected, { minWidth: 80 }]}
                       onPress={() => setNewTipo(t)}
                     >
                       <Text style={[styles.optionText, newTipo === t && styles.optionTextSelected]}>{t}</Text>
                     </TouchableOpacity>
                   ))}
-                </View>
+                </ScrollView>
               </View>
 
               <View style={styles.inputGroup}>

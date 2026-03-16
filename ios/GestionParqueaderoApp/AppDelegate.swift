@@ -2,6 +2,7 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import RNBootSplash // Add this import
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -28,6 +29,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       in: window,
       launchOptions: launchOptions
     )
+
+    // Initialize RNBootSplash with the storyboard name
+    RNBootSplash.initWithStoryboard("BootSplash", rootView: window?.rootViewController?.view)
 
     return true
   }
