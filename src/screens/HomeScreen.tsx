@@ -1,7 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, FlatList, Alert, Image } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { MENU_OPTIONS } from '../config/menuConfig';
+import { theme } from '../theme/theme';
+import { AppText } from '../components/AppText';
+import { ScreenContainer } from '../components/ScreenContainer';
+import { GlassCard } from '../components/GlassCard';
 
 interface HomeScreenProps {
   navigation: any;
@@ -10,7 +14,6 @@ interface HomeScreenProps {
 const HomeScreen = ({ navigation }: HomeScreenProps) => {
   const { logout, user, role } = useAuthStore();
 
-  // 2. Filtrar opciones según el rol del usuario actual
   const menuItems = MENU_OPTIONS.filter((item) => 
     item.roles.includes(role || '')
   );
@@ -21,20 +24,32 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
   };
 
   const handlePressOption = (item: typeof MENU_OPTIONS[0]) => {
-    // Intentamos navegar. Si la ruta no está registrada en AppNavigator, fallará (o no hará nada).
     try {
       navigation.navigate(item.route);
     } catch (error) {
-      Alert.alert('Aviso', `La pantalla "${item.title}" aún no está configurada en la navegación.`);
+      Alert.alert('Aviso', `La pantalla "${item.title}" aún no está configurada.`);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <ScreenContainer scrollable={false}>
       <View style={styles.header}>
-        <Text style={styles.title}>Hola, {user}</Text>
-        <Text style={styles.subtitle}>Rol: {role}</Text>
+        <View style={styles.headerLeft}>
+          <AppText type="bold" size={24}>Hola, {user}</AppText>
+          <View style={styles.roleBadge}>
+            <AppText type="semiBold" size={10} color="primary">{role}</AppText>
+          </View>
+        </View>
+        <Image 
+          source={require('../../assets/images/splash_logo.png')} 
+          style={styles.smallLogo}
+          resizeMode="contain"
+        />
       </View>
+
+      <AppText type="semiBold" color="textSecondary" style={styles.sectionTitle}>
+        Panel de Control
+      </AppText>
 
       <FlatList
         data={menuItems}
@@ -42,16 +57,26 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
         numColumns={2}
         contentContainerStyle={styles.gridContainer}
         columnWrapperStyle={styles.row}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No tienes permisos asignados.</Text>
+          <AppText color="textDimmed" align="center" style={{ marginTop: 40 }}>
+            No tienes permisos asignados.
+          </AppText>
         }
         renderItem={({ item }) => (
           <TouchableOpacity 
-            style={styles.card} 
+            activeOpacity={0.7}
+            style={styles.cardContainer}
             onPress={() => handlePressOption(item)}
           >
-            <Text style={styles.cardIcon}>{item.icon}</Text>
-            <Text style={styles.cardTitle}>{item.title}</Text>
+            <GlassCard style={styles.card}>
+              <View style={styles.iconContainer}>
+                <AppText size={32}>{item.icon}</AppText>
+              </View>
+              <AppText type="bold" size={14} align="center" style={styles.cardTitle}>
+                {item.title}
+              </AppText>
+            </GlassCard>
           </TouchableOpacity>
         )}
       />
@@ -60,83 +85,74 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
         style={styles.logoutButton}
         onPress={handleLogout}
       >
-        <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
+        <AppText type="bold" color="error">Cerrar Sesión</AppText>
       </TouchableOpacity>
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 20,
-  },
   header: {
-    marginTop: 40,
-    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+    marginTop: theme.spacing.sm,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+  headerLeft: {
+    flex: 1,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
+  roleBadge: {
+    backgroundColor: 'rgba(0, 163, 255, 0.1)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 163, 255, 0.2)',
+  },
+  smallLogo: {
+    width: 40,
+    height: 40,
+  },
+  sectionTitle: {
+    marginBottom: theme.spacing.md,
     textTransform: 'uppercase',
-    fontWeight: '600',
+    letterSpacing: 1.2,
   },
   gridContainer: {
-    paddingBottom: 20,
+    paddingBottom: theme.spacing.xl,
   },
   row: {
     justifyContent: 'space-between',
-    marginBottom: 15,
+  },
+  cardContainer: {
+    width: '48%',
+    marginBottom: theme.spacing.md,
   },
   card: {
-    backgroundColor: '#fff',
-    width: '48%', // Casi la mitad para que entren 2 por fila
-    aspectRatio: 1.1, // Un poco más alto que ancho o cuadrado
+    aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 16,
-    elevation: 4, // Sombra en Android
-    shadowColor: '#000', // Sombra en iOS
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    padding: 10,
   },
-  cardIcon: {
-    fontSize: 40,
-    marginBottom: 10,
+  iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: theme.colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 50,
-    fontSize: 16,
-    color: '#999',
+    marginTop: 4,
   },
   logoutButton: {
-    backgroundColor: '#FF3B30',
-    borderRadius: 8,
-    padding: 15,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  logoutButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
 });
 

@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -10,40 +9,40 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  FlatList,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
+import { theme } from '../theme/theme';
+import { AppText } from '../components/AppText';
+import { ScreenContainer } from '../components/ScreenContainer';
+import { GlassCard } from '../components/GlassCard';
+import { PrimaryButton } from '../components/PrimaryButton';
 
-// Interface para listar usuarios (asumida de cómo debería devolver tu API)
 interface UsuarioDTO {
   id?: number;
   username: string;
   role?: string;
+  rol?: string; // Fallback for some backend versions
 }
 
 const RegisterUserScreen = () => {
-  const navigation = useNavigation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'OPERADOR' | 'ADMIN'>('OPERADOR');
+  const [role, setRole] = useState<'OPERADOR' | 'ADMIN' | 'USER'>('OPERADOR');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Estados para gestionar usuarios
   const [users, setUsers] = useState<UsuarioDTO[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
-  // Cargar usuarios al entrar a la pantalla
   const fetchUsers = async () => {
     try {
       setLoadingUsers(true);
-      // Asumimos un endpoint tipo GET /api/auth/users o /api/usuarios
-      const response = await api.get('/api/usuarios'); // Actualiza este endpoint exacto de tu API
+      const response = await api.get('/api/usuarios');
       setUsers(response.data);
     } catch (error) {
-      console.log('No se pudieron cargar los usuarios. Verifica si el endpoint es correcto.', error);
+      console.log('Error al cargar usuarios:', error);
     } finally {
       setLoadingUsers(false);
     }
@@ -55,28 +54,30 @@ const RegisterUserScreen = () => {
     }, [])
   );
 
-  const handleDeleteUser = (username: string) => {
-    Alert.alert(
-      'Eliminar Usuario',
-      `¿Estás seguro de que deseas eliminar al usuario "${username}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Eliminar', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Endpoint actualizado según YAML: /api/auth/eliminar/{username}
-              await api.delete(`/api/auth/eliminar/${username}`); 
-              Alert.alert('Éxito', 'Usuario eliminado correctamente.');
-              fetchUsers(); // Recargar la lista
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.message || 'No se pudo eliminar el usuario.');
-            }
+  const handleDeleteUser = (usernameToDelete: string) => {
+    if (!usernameToDelete) {
+      Alert.alert('Error', 'No se puede identificar al usuario para eliminar.');
+      return;
+    }
+
+    Alert.alert('Confirmar', `¿Estás seguro de que deseas eliminar al usuario "${usernameToDelete}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { 
+        text: 'Eliminar', 
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete(`/api/usuarios/${usernameToDelete}`); 
+            Alert.alert('Éxito', 'Usuario eliminado correctamente.');
+            fetchUsers();
+          } catch (error: any) {
+            console.error('Error al eliminar usuario:', error);
+            const msg = error.response?.data?.message || 'No se pudo eliminar el usuario del sistema.';
+            Alert.alert('Error', msg);
           }
         }
-      ]
-    );
+      }
+    ]);
   };
 
   const handleRegister = async () => {
@@ -84,46 +85,26 @@ const RegisterUserScreen = () => {
       Alert.alert('Error', 'Todos los campos son obligatorios.');
       return;
     }
-
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Las contraseñas no coinciden.');
       return;
     }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres.');
-      return;
-    }
-
     setLoading(true);
     try {
+      // Enviamos tanto 'role' como 'rol' para asegurar compatibilidad con el backend
       await api.post('/api/auth/register', {
         username: username.trim(),
         password,
         role: role,
+        rol: role,
       });
-
-      Alert.alert(
-        'Usuario Creado',
-        `El usuario "${username}" ha sido registrado correctamente.`,
-        [
-          { 
-            text: 'Aceptar', 
-            onPress: () => {
-              setUsername('');
-              setPassword('');
-              setConfirmPassword('');
-              fetchUsers(); // Recargamos la lista automáticamente
-            } 
-          }
-        ]
-      );
+      Alert.alert('Éxito', 'Usuario registrado correctamente.');
+      setUsername('');
+      setPassword('');
+      setConfirmPassword('');
+      fetchUsers();
     } catch (error: any) {
-      console.error('Error al registrar usuario:', error);
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || 'No se pudo registrar el usuario. Es posible que el nombre de usuario ya exista.'
-      );
+      Alert.alert('Error', error.response?.data?.message || 'Error al registrar el usuario.');
     } finally {
       setLoading(false);
     }
@@ -131,275 +112,219 @@ const RegisterUserScreen = () => {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        <View style={styles.container}>
-          <View style={styles.card}>
-            <Text style={styles.title}>Crear Usuario</Text>
-            <Text style={styles.subtitle}>Añade un nuevo operador o admin al sistema</Text>
+      <ScreenContainer scrollable={true}>
+        <View style={styles.header}>
+          <AppText type="black" size={32}>Gestión de</AppText>
+          <AppText type="black" size={32} color="primary">Usuarios</AppText>
+        </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Nombre de Usuario</Text>
+        <GlassCard style={styles.formCard}>
+          <AppText type="bold" size={18} style={{ marginBottom: 16 }}>Nuevo Registro</AppText>
+          
+          <View style={styles.inputGroup}>
+            <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>NOMBRE DE USUARIO</AppText>
+            <TextInput
+              style={styles.input}
+              value={username}
+              onChangeText={setUsername}
+              placeholder="Ej: juan_operario"
+              placeholderTextColor={theme.colors.textDimmed}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>CONTRASEÑA</AppText>
+            <View style={styles.passwordWrapper}>
               <TextInput
-                style={styles.input}
-                value={username}
-                onChangeText={setUsername}
-                placeholder="Ejemplo: operador_juan"
-                placeholderTextColor="#999"
-                autoCapitalize="none"
+                style={styles.passwordInput}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Mínimo 6 caracteres"
+                placeholderTextColor={theme.colors.textDimmed}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                <AppText size={18}>{showPassword ? '🐵' : '🙈'}</AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>CONFIRMAR CONTRASEÑA</AppText>
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={styles.passwordInput}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Repite la contraseña"
+                placeholderTextColor={theme.colors.textDimmed}
+                secureTextEntry={!showPassword}
               />
             </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Contraseña</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Mínimo 6 caracteres"
-                  placeholderTextColor="#999"
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity
-                  style={styles.eyeIcon}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Text style={{ fontSize: 20 }}>{showPassword ? '🙈' : '👁️'}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Confirmar Contraseña</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="Repite la contraseña"
-                  placeholderTextColor="#999"
-                  secureTextEntry={!showPassword}
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Rol de Usuario</Text>
-              <View style={styles.optionsRow}>
-                {(['OPERADOR', 'ADMIN'] as const).map((r) => (
-                  <TouchableOpacity
-                    key={r}
-                    style={[styles.optionButton, role === r && styles.optionSelected]}
-                    onPress={() => setRole(r)}
-                  >
-                    <Text style={[styles.optionText, role === r && styles.optionTextSelected]}>{r}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleRegister}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Registrar Usuario ➕</Text>
-              )}
-            </TouchableOpacity>
           </View>
 
-          {/* Segunda Card: Gestionar Usuarios */}
-          <View style={[styles.card, { marginTop: 20 }]}>
-            <Text style={styles.title}>Gestionar Usuarios</Text>
-            <Text style={styles.subtitle}>Listado de operadores y administradores</Text>
+          <View style={styles.inputGroup}>
+            <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>ROL ASIGNADO</AppText>
+            <View style={styles.roleRow}>
+              {(['OPERADOR', 'ADMIN', 'USER'] as const).map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  activeOpacity={0.7}
+                  style={[styles.roleBtn, role === r && styles.roleActive]}
+                  onPress={() => setRole(r)}
+                >
+                  <AppText type="bold" size={10} color={role === r ? 'text' : 'textDimmed'}>
+                    {r === 'OPERADOR' ? 'OPERARIO' : r === 'ADMIN' ? 'ADMIN' : 'USUARIO'}
+                  </AppText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
 
-            {loadingUsers ? (
-              <ActivityIndicator color="#007AFF" style={{ marginVertical: 20 }} />
-            ) : users.length === 0 ? (
-              <Text style={styles.emptyText}>No hay o no se pudieron cargar los usuarios.</Text>
-            ) : (
-              users.map((u, index) => (
-                <View key={u.id?.toString() || index.toString()} style={styles.userRow}>
-                  <View style={styles.userInfo}>
-                    <Text style={styles.userNameText}>{u.username}</Text>
-                    <View style={styles.badgeContainer}>
-                      <Text style={styles.badgeText}>{u.role || 'USUARIO'}</Text>
+          <PrimaryButton
+            title="REGISTRAR USUARIO"
+            onPress={handleRegister}
+            isLoading={loading}
+          />
+        </GlassCard>
+
+        <View style={styles.listSection}>
+          <AppText type="bold" size={18} style={{ marginBottom: 16 }}>Usuarios del Sistema</AppText>
+          {loadingUsers ? (
+            <ActivityIndicator color={theme.colors.primary} />
+          ) : users.length === 0 ? (
+            <AppText color="textDimmed" align="center">No hay usuarios registrados.</AppText>
+          ) : (
+            users.map((u, index) => (
+              <GlassCard key={index} style={styles.userItem}>
+                <View style={styles.userMain}>
+                  <View style={styles.userAvatar}>
+                    <AppText size={20}>👤</AppText>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <AppText type="bold" size={16}>{u.username}</AppText>
+                    <View style={styles.roleBadge}>
+                      <AppText type="bold" size={9} color="primary">
+                        {u.role || u.rol || 'USER'}
+                      </AppText>
                     </View>
                   </View>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
+                  <TouchableOpacity 
                     onPress={() => handleDeleteUser(u.username)}
+                    style={styles.deleteBtn}
                   >
-                    <Text style={styles.deleteButtonText}>✕ Eliminar</Text>
+                    <AppText type="bold" size={10} color="error">ELIMINAR</AppText>
                   </TouchableOpacity>
                 </View>
-              ))
-            )}
-          </View>
-
+              </GlassCard>
+            ))
+          )}
         </View>
-      </ScrollView>
+        <View style={{ height: 40 }} />
+      </ScreenContainer>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
+  header: {
+    marginBottom: theme.spacing.lg,
   },
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 20,
-    justifyContent: 'center',
+  formCard: {
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 25,
-  },
-  inputContainer: {
-    marginBottom: 15,
+  inputGroup: {
+    marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#444',
-    marginBottom: 8,
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
     padding: 12,
-    fontSize: 16,
-    color: '#333',
+    color: theme.colors.text,
+    fontFamily: theme.fonts.semiBold,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  passwordContainer: {
+  passwordWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    borderColor: theme.colors.border,
   },
   passwordInput: {
     flex: 1,
     padding: 12,
-    fontSize: 16,
-    color: '#333',
+    color: theme.colors.text,
+    fontFamily: theme.fonts.semiBold,
   },
-  eyeIcon: {
+  eyeBtn: {
+    paddingHorizontal: 16,
+  },
+  roleRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  roleBtn: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceLight,
+    paddingVertical: 10,
+    borderRadius: theme.borderRadius.sm,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  roleActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  listSection: {
+    marginTop: 10,
+  },
+  userItem: {
+    marginBottom: 10,
     padding: 12,
   },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  optionsRow: {
+  userMain: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
-    gap: 15,
+    alignItems: 'center',
   },
-  optionButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
+  userAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: theme.colors.border,
   },
-  optionSelected: {
-    backgroundColor: '#007AFF',
+  roleBadge: {
+    backgroundColor: 'rgba(0, 163, 255, 0.1)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    marginTop: 2,
   },
-  optionText: {
-    color: '#007AFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  optionTextSelected: {
-    color: '#fff',
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#999',
-    marginVertical: 15,
-  },
-  userRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  userInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  userNameText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  badgeContainer: {
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  badgeText: {
-    color: '#2E7D32',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  deleteButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 12,
+  deleteBtn: {
+    paddingHorizontal: 10,
     paddingVertical: 6,
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
     borderRadius: 6,
-  },
-  deleteButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.2)',
   },
 });
 

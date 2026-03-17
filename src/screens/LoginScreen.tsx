@@ -6,16 +6,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuthStore } from '../store/useAuthStore';
+import { theme } from '../theme/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -34,7 +36,6 @@ const LoginScreen = () => {
 
     try {
       await login(username, password);
-      Alert.alert('Éxito', 'Bienvenido');
       navigation.navigate('Home');
     } catch (error: any) {
       Alert.alert(
@@ -45,50 +46,66 @@ const LoginScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ImageBackground
-        source={require('../../assets/images/logo.png')}
-        style={styles.background}
-        resizeMode="cover"
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.overlay}>
-            <View style={styles.container}>
-              <Text style={styles.title}>Gestión Parqueadero</Text>
-              <Text style={styles.subtitle}>Iniciar Sesión</Text>
-
-              <TextInput
-                style={styles.input}
-                placeholder="Usuario"
-                placeholderTextColor="#999"
-                value={username}
-                onChangeText={setUsername}
-                autoCapitalize="none"
-              />
-
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Contraseña"
-                  placeholderTextColor="#999"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
+          <View style={styles.container}>
+            {/* Header / Logo Section */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require('../../assets/images/splash_logo.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
                 />
-                <TouchableOpacity
-                  style={styles.eyeIcon}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Text style={{ fontSize: 20 }}>
-                    {showPassword ? '🙈' : '👁️'}
-                  </Text>
-                </TouchableOpacity>
+              </View>
+              <Text style={styles.title}>Gestión</Text>
+              <Text style={[styles.title, { color: theme.colors.primary }]}>Parqueadero</Text>
+              <Text style={styles.subtitle}>Potenciando la eficiencia en tu estacionamiento</Text>
+            </View>
+
+            {/* Login Form Section */}
+            <View style={styles.glassCard}>
+              <Text style={styles.formTitle}>Bienvenido de nuevo</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Usuario</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="ej. administrador"
+                  placeholderTextColor={theme.colors.textDimmed}
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Contraseña</Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="••••••••"
+                    placeholderTextColor={theme.colors.textDimmed}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Text style={{ fontSize: 18 }}>
+                      {showPassword ? '🙈' : '👁️'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <TouchableOpacity
@@ -99,92 +116,138 @@ const LoginScreen = () => {
                 {isLoading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.buttonText}>Ingresar</Text>
+                  <Text style={styles.buttonText}>Iniciar Sesión</Text>
                 )}
               </TouchableOpacity>
             </View>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>© 2026 Gaelectronica Tecnologia</Text>
+            </View>
           </View>
         </ScrollView>
-      </ImageBackground>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {
+  safeArea: {
     flex: 1,
-    width: '100%',
-    height: '100%',
+    backgroundColor: theme.colors.background,
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    padding: 20,
+    padding: theme.spacing.lg,
   },
   container: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 16,
-    padding: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    flex: 1,
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xxl,
+  },
+  logoContainer: {
+    width: 100,
+    height: 100,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  logo: {
+    width: 70,
+    height: 70,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 34,
+    fontFamily: theme.fonts.black,
+    color: theme.colors.text,
+    lineHeight: 38,
     textAlign: 'center',
-    marginBottom: 10,
-    color: '#333',
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 14,
+    fontFamily: theme.fonts.medium,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.sm,
     textAlign: 'center',
-    marginBottom: 40,
-    color: '#666',
+  },
+  glassCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.glassBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  formTitle: {
+    fontSize: 20,
+    fontFamily: theme.fonts.bold,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.lg,
+  },
+  inputGroup: {
+    marginBottom: theme.spacing.md,
+  },
+  label: {
+    fontSize: 14,
+    fontFamily: theme.fonts.semiBold,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+    marginLeft: 4,
   },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    color: theme.colors.text,
     fontSize: 16,
+    fontFamily: theme.fonts.regular,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 15,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.colors.border,
   },
   passwordInput: {
     flex: 1,
-    padding: 15,
+    padding: theme.spacing.md,
+    color: theme.colors.text,
     fontSize: 16,
+    fontFamily: theme.fonts.regular,
   },
   eyeIcon: {
-    padding: 15,
-  },
-  eyeIconText: {
-    color: '#007AFF',
-    fontWeight: '600',
+    padding: theme.spacing.md,
   },
   button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    padding: 15,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: theme.spacing.md,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -192,7 +255,16 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
+  },
+  footer: {
+    marginTop: theme.spacing.xxl,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 12,
+    fontFamily: theme.fonts.medium,
+    color: theme.colors.textDimmed,
   },
 });
 

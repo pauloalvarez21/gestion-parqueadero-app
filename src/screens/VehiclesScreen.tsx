@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   TextInput,
@@ -13,6 +12,11 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
+import { theme } from '../theme/theme';
+import { AppText } from '../components/AppText';
+import { ScreenContainer } from '../components/ScreenContainer';
+import { GlassCard } from '../components/GlassCard';
+import { PrimaryButton } from '../components/PrimaryButton';
 
 interface Vehiculo {
   id?: number;
@@ -29,10 +33,7 @@ const VehiclesScreen = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Estados para búsqueda
   const [searchPlaca, setSearchPlaca] = useState('');
-
-  // Estados para nuevo vehículo
   const [newPlaca, setNewPlaca] = useState('');
   const [newTipo, setNewTipo] = useState<'CARRO' | 'MOTO' | 'CAMION' | 'BICICLETA'>('CARRO');
   const [newMarca, setNewMarca] = useState('');
@@ -40,26 +41,18 @@ const VehiclesScreen = () => {
   const [newNombrePropietario, setNewNombrePropietario] = useState('');
   const [newTelefonoPropietario, setNewTelefonoPropietario] = useState('');
 
-  // Estado para mostrar el "modal" de registro
   const [showAddForm, setShowAddForm] = useState(false);
 
   const loadVehicles = async (query = '') => {
     try {
       setLoading(true);
-      console.log('Iniciando carga de vehículos...');
-      
       let url = '/api/vehiculos';
       if (query.trim()) {
         url += `?placa=${query.trim().toUpperCase()}`;
       }
-      
-      console.log('Consultando URL:', url);
       const response = await api.get(url);
-      
-      console.log('Vehículos encontrados:', response.data);
       setVehicles(response.data);
     } catch (error: any) {
-      console.error('Error loading vehicles:', error);
       Alert.alert('Error', 'No se pudieron cargar los vehículos.');
     } finally {
       setLoading(false);
@@ -93,7 +86,6 @@ const VehiclesScreen = () => {
         telefonoPropietario: newTelefonoPropietario,
       };
 
-      console.log('Registrando vehículo:', vehicleData);
       await api.post('/api/vehiculos', vehicleData);
       
       Alert.alert('Éxito', 'Vehículo registrado con éxito.');
@@ -105,7 +97,6 @@ const VehiclesScreen = () => {
       setShowAddForm(false);
       loadVehicles(searchPlaca);
     } catch (error: any) {
-      console.error('Error adding vehicle:', error);
       Alert.alert('Error', error.response?.data?.message || 'Error al registrar el vehículo.');
     } finally {
       setActionLoading(false);
@@ -114,178 +105,183 @@ const VehiclesScreen = () => {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.container}>
-          
-          {/* Card 1: Buscador */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Buscar Vehículo 🔍</Text>
-            <View style={styles.searchRow}>
+      <ScreenContainer scrollable={true}>
+        <View style={styles.header}>
+          <AppText type="black" size={32}>Gestión de</AppText>
+          <AppText type="black" size={32} color="primary">Vehículos</AppText>
+        </View>
+
+        <GlassCard style={styles.searchCard}>
+          <AppText type="bold" size={12} color="textSecondary" style={styles.sectionLabel}>
+            BUSCAR POR PLACA
+          </AppText>
+          <View style={styles.searchRow}>
+            <TextInput
+              style={styles.searchInput}
+              value={searchPlaca}
+              onChangeText={setSearchPlaca}
+              placeholder="Ej: AAA-123"
+              placeholderTextColor={theme.colors.textDimmed}
+              autoCapitalize="characters"
+            />
+            <TouchableOpacity 
+              style={styles.searchButton} 
+              onPress={handleSearch}
+              activeOpacity={0.7}
+            >
+              <AppText size={20}>🔍</AppText>
+            </TouchableOpacity>
+          </View>
+        </GlassCard>
+
+        <TouchableOpacity 
+          activeOpacity={0.7}
+          style={[styles.addBtn, showAddForm && styles.addBtnActive]} 
+          onPress={() => setShowAddForm(!showAddForm)}
+        >
+          <AppText type="bold" color={showAddForm ? 'error' : 'primary'}>
+            {showAddForm ? '✕ Cancelar Registro' : '➕ Nuevo Vehículo'}
+          </AppText>
+        </TouchableOpacity>
+
+        {showAddForm && (
+          <GlassCard style={styles.formCard}>
+            <AppText type="bold" size={18} style={{ marginBottom: 16 }}>Datos del Vehículo</AppText>
+            
+            <View style={styles.inputGroup}>
+              <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>PLACA</AppText>
               <TextInput
-                style={styles.searchInput}
-                value={searchPlaca}
-                onChangeText={setSearchPlaca}
-                placeholder="Ingresar placa (Ej: AAA-123)"
+                style={styles.input}
+                value={newPlaca}
+                onChangeText={setNewPlaca}
+                placeholder="ABC-123"
+                placeholderTextColor={theme.colors.textDimmed}
                 autoCapitalize="characters"
               />
-              <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-                <Text style={styles.searchButtonText}>Buscar</Text>
-              </TouchableOpacity>
             </View>
-          </View>
 
-          {/* Botón para mostrar formulario de registro */}
-          <TouchableOpacity 
-            style={styles.addTrigger} 
-            onPress={() => setShowAddForm(!showAddForm)}
-          >
-            <Text style={styles.addTriggerText}>
-              {showAddForm ? '✕ Cancelar' : '➕ Registrar Nuevo Vehículo'}
-            </Text>
-          </TouchableOpacity>
+            <View style={styles.inputGroup}>
+              <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>TIPO</AppText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsRow}>
+                {(['CARRO', 'MOTO', 'CAMION', 'BICICLETA'] as const).map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    activeOpacity={0.7}
+                    style={[styles.optionButton, newTipo === t && styles.optionSelected]}
+                    onPress={() => setNewTipo(t)}
+                  >
+                    <AppText type="bold" size={11} color={newTipo === t ? 'text' : 'textDimmed'}>
+                      {t}
+                    </AppText>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
 
-          {/* Card 2: Formulario de Registro (Condicional) */}
-          {showAddForm && (
-            <View style={[styles.card, styles.addFormCard]}>
-              <Text style={styles.cardTitle}>Nuevo Registro 🚙</Text>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Placa</Text>
-                <TextInput
-                  style={styles.input}
-                  value={newPlaca}
-                  onChangeText={setNewPlaca}
-                  placeholder="Ej: XYZ-789"
-                  autoCapitalize="characters"
-                />
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Tipo</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsRow}>
-                  {(['CARRO', 'MOTO', 'CAMION', 'BICICLETA'] as const).map((t) => (
-                    <TouchableOpacity
-                      key={t}
-                      style={[styles.optionButton, newTipo === t && styles.optionSelected, { minWidth: 80 }]}
-                      onPress={() => setNewTipo(t)}
-                    >
-                      <Text style={[styles.optionText, newTipo === t && styles.optionTextSelected]}>{t}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Marca (Opcional)</Text>
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>MARCA</AppText>
                 <TextInput
                   style={styles.input}
                   value={newMarca}
                   onChangeText={setNewMarca}
-                  placeholder="Ej: Toyota"
+                  placeholder="Toyota"
+                  placeholderTextColor={theme.colors.textDimmed}
                 />
               </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Modelo (Opcional)</Text>
+              <View style={{ width: 12 }} />
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>MODELO</AppText>
                 <TextInput
                   style={styles.input}
                   value={newModelo}
                   onChangeText={setNewModelo}
-                  placeholder="Ej: Corolla"
+                  placeholder="2024"
+                  placeholderTextColor={theme.colors.textDimmed}
                 />
               </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Propietario (Opcional)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={newNombrePropietario}
-                  onChangeText={setNewNombrePropietario}
-                  placeholder="Nombre completo"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Teléfono (Opcional)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={newTelefonoPropietario}
-                  onChangeText={setNewTelefonoPropietario}
-                  placeholder="Ej: 3001234567"
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <TouchableOpacity 
-                style={[styles.btn, styles.btnSuccess, actionLoading && styles.btnDisabled]}
-                onPress={addVehicle}
-                disabled={actionLoading}
-              >
-                {actionLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Registrar Vehículo</Text>}
-              </TouchableOpacity>
             </View>
-          )}
 
-          {/* Card 3: Listado de Vehículos */}
-          <View style={[styles.card, { marginTop: 20 }]}>
-            <Text style={styles.cardTitle}>Vehículos Registrados 📋</Text>
-            
-            {loading ? (
-              <ActivityIndicator color="#007AFF" style={{ marginVertical: 20 }} />
-            ) : vehicles.length === 0 ? (
-              <Text style={styles.emptyText}>No se encontraron vehículos.</Text>
-            ) : (
-              vehicles.map((v, index) => (
-                <View key={v.id?.toString() || index.toString()} style={styles.vehicleRow}>
-                  <View style={styles.vehicleInfo}>
-                    <Text style={styles.placaText}>{v.placa}</Text>
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{v.tipo}</Text>
+            <View style={styles.inputGroup}>
+              <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>PROPIETARIO</AppText>
+              <TextInput
+                style={styles.input}
+                value={newNombrePropietario}
+                onChangeText={setNewNombrePropietario}
+                placeholder="Nombre completo"
+                placeholderTextColor={theme.colors.textDimmed}
+              />
+            </View>
+
+            <PrimaryButton
+              title="GUARDAR VEHÍCULO"
+              onPress={addVehicle}
+              isLoading={actionLoading}
+              style={{ marginTop: 8 }}
+            />
+          </GlassCard>
+        )}
+
+        <View style={styles.listSection}>
+          <AppText type="bold" size={18} style={styles.listTitle}>
+            Vehículos Registrados
+          </AppText>
+          
+          {loading ? (
+            <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 20 }} />
+          ) : vehicles.length === 0 ? (
+            <AppText color="textDimmed" align="center" style={{ marginTop: 20 }}>
+              No se encontraron vehículos.
+            </AppText>
+          ) : (
+            vehicles.map((v, index) => (
+              <GlassCard key={v.id || index} style={styles.vehicleItem}>
+                <View style={styles.vehicleHeader}>
+                  <View>
+                    <AppText type="black" size={20}>{v.placa}</AppText>
+                    <View style={styles.typeBadge}>
+                      <AppText type="bold" size={10} color="primary">{v.tipo}</AppText>
                     </View>
                   </View>
-                  <Text style={styles.idText}>ID: {v.id}</Text>
+                  <AppText type="semiBold" size={12} color="textDimmed">ID: {v.id}</AppText>
                 </View>
-              ))
-            )}
-          </View>
-
+                
+                {(v.marca || v.nombrePropietario) && (
+                  <View style={styles.vehicleDetails}>
+                    <AppText size={13} color="textSecondary">
+                      {v.marca} {v.modelo}
+                    </AppText>
+                    {v.nombrePropietario && (
+                      <AppText size={12} color="textDimmed" style={{ marginTop: 2 }}>
+                        👤 {v.nombrePropietario}
+                      </AppText>
+                    )}
+                  </View>
+                )}
+              </GlassCard>
+            ))
+          )}
         </View>
-      </ScrollView>
+        <View style={{ height: 40 }} />
+      </ScreenContainer>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
+  header: {
+    marginBottom: theme.spacing.lg,
   },
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 20,
+  searchCard: {
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  addFormCard: {
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
+  sectionLabel: {
+    marginBottom: 8,
+    letterSpacing: 1,
   },
   searchRow: {
     flexDirection: 'row',
@@ -293,129 +289,103 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
+    padding: 12,
+    color: theme.colors.text,
+    fontFamily: theme.fonts.bold,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
+    borderColor: theme.colors.border,
   },
   searchButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.surfaceLight,
+    paddingHorizontal: 16,
+    borderRadius: theme.borderRadius.md,
     justifyContent: 'center',
-    paddingHorizontal: 15,
-    borderRadius: 8,
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  addTrigger: {
-    marginTop: 15,
-    padding: 10,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  addTriggerText: {
-    color: '#007AFF',
-    fontWeight: 'bold',
-    fontSize: 15,
+  addBtn: {
+    backgroundColor: 'rgba(0, 163, 255, 0.1)',
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 163, 255, 0.2)',
+    marginBottom: theme.spacing.md,
+  },
+  addBtnActive: {
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    borderColor: 'rgba(255, 59, 48, 0.2)',
+  },
+  formCard: {
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
   },
   inputGroup: {
-    marginBottom: 15,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 5,
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
     padding: 12,
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: theme.colors.text,
+    fontFamily: theme.fonts.semiBold,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  row: {
+    flexDirection: 'row',
   },
   optionsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 5,
+    gap: 8,
   },
   optionButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: theme.colors.surfaceLight,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: theme.borderRadius.sm,
     borderWidth: 1,
-    borderColor: '#007AFF',
-    alignItems: 'center',
+    borderColor: theme.colors.border,
   },
   optionSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
-  optionText: {
-    color: '#007AFF',
-    fontWeight: 'bold',
-    fontSize: 12,
+  listSection: {
+    marginTop: theme.spacing.md,
   },
-  optionTextSelected: {
-    color: '#fff',
+  listTitle: {
+    marginBottom: 16,
   },
-  btn: {
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
+  vehicleItem: {
+    marginBottom: 12,
+    padding: theme.spacing.md,
   },
-  btnSuccess: {
-    backgroundColor: '#28a745',
-  },
-  btnDisabled: {
-    opacity: 0.6,
-  },
-  btnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  vehicleRow: {
+  vehicleHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    alignItems: 'flex-start',
   },
-  vehicleInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  typeBadge: {
+    backgroundColor: 'rgba(0, 163, 255, 0.1)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 4,
   },
-  placaText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  badge: {
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeText: {
-    color: '#1976D2',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  idText: {
-    fontSize: 12,
-    color: '#999',
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#999',
-    marginVertical: 20,
+  vehicleDetails: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
 });
 

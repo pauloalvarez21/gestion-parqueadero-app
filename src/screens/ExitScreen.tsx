@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   Keyboard,
   TouchableWithoutFeedback,
   PermissionsAndroid,
@@ -18,6 +16,11 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import api from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { theme } from '../theme/theme';
+import { AppText } from '../components/AppText';
+import { ScreenContainer } from '../components/ScreenContainer';
+import { GlassCard } from '../components/GlassCard';
+import { PrimaryButton } from '../components/PrimaryButton';
 
 type ExitScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Salida'>;
 
@@ -28,7 +31,6 @@ const ExitScreen = () => {
   const [observaciones, setObservaciones] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Mismo manejo de placa que EntryScreen
   const handlePlateChange = (text: string) => {
     const cleaned = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (cleaned.length > 6) return;
@@ -46,7 +48,7 @@ const ExitScreen = () => {
           PermissionsAndroid.PERMISSIONS.CAMERA,
           {
             title: "Permiso de cámara",
-            message: "La aplicación necesita acceso a tu cámara para poder escanear las placas de los vehículos.",
+            message: "La aplicación necesita acceso a tu cámara para poder escanear las placas.",
             buttonNeutral: "Preguntar luego",
             buttonNegative: "Cancelar",
             buttonPositive: "Aceptar"
@@ -70,9 +72,7 @@ const ExitScreen = () => {
         saveToPhotos: false,
       });
 
-      if (result.didCancel || !result.assets || result.assets.length === 0) {
-        return;
-      }
+      if (result.didCancel || !result.assets || result.assets.length === 0) return;
 
       setLoading(true);
       const uri = result.assets[0].uri;
@@ -84,11 +84,11 @@ const ExitScreen = () => {
         if (found) {
           handlePlateChange(found);
         } else {
-          Alert.alert('Aviso', 'No se pudo detectar una placa clara en la imagen.');
+          Alert.alert('Aviso', 'No se pudo detectar una placa clara.');
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Falló el reconocimiento de texto.');
+      Alert.alert('Error', 'Falló el recognition de texto.');
     } finally {
       setLoading(false);
     }
@@ -96,7 +96,7 @@ const ExitScreen = () => {
 
   const handleRegisterExit = async () => {
     if (!placa.trim() && !codigoTicket.trim()) {
-      Alert.alert('Error', 'Por favor ingresa la placa del vehículo o el código del ticket');
+      Alert.alert('Error', 'Por favor ingresa la placa o el código del ticket');
       return;
     }
 
@@ -112,22 +112,15 @@ const ExitScreen = () => {
       setCodigoTicket('');
       setObservaciones('');
 
-      const { valorTotal, duracionHoras, duracionMinutos, mensaje } = response.data;
+      const { valorTotal, duracionHoras, duracionMinutos, mensaje, creadoPor, finalizadoPor } = response.data;
 
       Alert.alert(
         'Salida Registrada',
-        `Mensaje: ${mensaje || 'Pago calculado'}\nTiempo: ${duracionHoras}h ${duracionMinutos}m\nTotal a cobrar: $${valorTotal}`,
-        [
-          { text: 'Aceptar', onPress: () => navigation.goBack() }
-        ],
-        { cancelable: false }
+        `Mensaje: ${mensaje || 'Pago calculado'}\nTiempo: ${duracionHoras}h ${duracionMinutos}m\nTotal a cobrar: $${valorTotal}${creadoPor ? `\n\nIngresado por: ${creadoPor}` : ''}${finalizadoPor ? `\nFinalizado por: ${finalizadoPor}` : ''}`,
+        [{ text: 'Aceptar', onPress: () => navigation.goBack() }]
       );
     } catch (error: any) {
-      console.error('Error al registrar salida:', error);
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || 'No se pudo registrar la salida'
-      );
+      Alert.alert('Error', error.response?.data?.message || 'No se pudo registrar la salida');
     } finally {
       setLoading(false);
     }
@@ -135,169 +128,160 @@ const ExitScreen = () => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Registrar Salida</Text>
-          <Text style={styles.subtitle}>Escanea la placa o ingresa el ticket</Text>
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenContainer>
+          <View style={styles.header}>
+            <AppText type="black" size={32}>Registrar</AppText>
+            <AppText type="black" size={32} color="primary">Salida</AppText>
+            <AppText color="textSecondary" style={{ marginTop: 4 }}>
+              Finaliza el tiempo de estancia
+            </AppText>
+          </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Placa del Vehículo</Text>
-            <View style={styles.inputRow}>
+          <GlassCard style={styles.formCard}>
+            <View style={styles.section}>
+              <AppText type="semiBold" size={14} color="textSecondary" style={styles.label}>
+                PLACA DEL VEHÍCULO
+              </AppText>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.plateInput}
+                  value={placa}
+                  onChangeText={handlePlateChange}
+                  placeholder="AAA-123"
+                  placeholderTextColor={theme.colors.textDimmed}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={7}
+                />
+                <TouchableOpacity 
+                  style={styles.scanButton} 
+                  onPress={handleScanPlate}
+                  activeOpacity={0.7}
+                >
+                  <AppText size={20}>📷</AppText>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.divider}>
+              <View style={styles.line} />
+              <AppText type="bold" size={12} color="textDimmed" style={styles.orText}>Ó</AppText>
+              <View style={styles.line} />
+            </View>
+
+            <View style={styles.section}>
+              <AppText type="semiBold" size={14} color="textSecondary" style={styles.label}>
+                CÓDIGO DEL TICKET
+              </AppText>
               <TextInput
                 style={styles.input}
-                value={placa}
-                onChangeText={handlePlateChange}
-                placeholder="AAA-123"
-                placeholderTextColor="#ccc"
+                value={codigoTicket}
+                onChangeText={setCodigoTicket}
+                placeholder="Ej: TKT-123456"
+                placeholderTextColor={theme.colors.textDimmed}
                 autoCapitalize="characters"
                 autoCorrect={false}
-                maxLength={7}
               />
-              <TouchableOpacity style={styles.cameraButton} onPress={handleScanPlate}>
-                <Text style={styles.cameraIcon}>📷</Text>
-              </TouchableOpacity>
             </View>
-          </View>
 
-          <Text style={styles.orText}>- Ó -</Text>
+            <View style={styles.section}>
+              <AppText type="semiBold" size={14} color="textSecondary" style={styles.label}>
+                OBSERVACIONES (OPCIONAL)
+              </AppText>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={observaciones}
+                onChangeText={setObservaciones}
+                placeholder="Ej: Abolladura en la puerta..."
+                placeholderTextColor={theme.colors.textDimmed}
+                multiline
+              />
+            </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Código del Ticket</Text>
-            <TextInput
-              style={styles.inputFull}
-              value={codigoTicket}
-              onChangeText={setCodigoTicket}
-              placeholder="Ej: TKT-123456"
-              placeholderTextColor="#ccc"
-              autoCapitalize="characters"
-              autoCorrect={false}
+            <PrimaryButton
+              title="REGISTRAR SALIDA"
+              onPress={handleRegisterExit}
+              isLoading={loading}
+              style={styles.submitButton}
             />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Observaciones (opcional)</Text>
-            <TextInput
-              style={styles.inputFull}
-              value={observaciones}
-              onChangeText={setObservaciones}
-              placeholder="Ej: Abolladura en la puerta..."
-              placeholderTextColor="#ccc"
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleRegisterExit}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Registrar Salida 🏁</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+          </GlassCard>
+        </ScreenContainer>
       </View>
     </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 20,
-    justifyContent: 'center',
+  header: {
+    marginBottom: theme.spacing.xl,
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
+  formCard: {
+    padding: theme.spacing.lg,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  inputContainer: {
-    marginBottom: 15,
+  section: {
+    marginBottom: theme.spacing.md,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#444',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
+    letterSpacing: 1,
   },
-  inputRow: {
+  inputWrapper: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  plateInput: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    color: theme.colors.text,
+    fontSize: 24,
+    fontFamily: theme.fonts.black,
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  scanButton: {
+    backgroundColor: theme.colors.surfaceLight,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   input: {
-    flex: 1,
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    color: theme.colors.text,
     fontSize: 16,
-    color: '#333',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  inputFull: {
-    backgroundColor: '#f9f9f9',
+    fontFamily: theme.fonts.regular,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#333',
+    borderColor: theme.colors.border,
   },
-  cameraButton: {
-    marginLeft: 10,
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
-    justifyContent: 'center',
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  divider: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginVertical: theme.spacing.lg,
   },
-  cameraIcon: {
-    fontSize: 20,
-    color: '#fff',
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.border,
   },
   orText: {
-    textAlign: 'center',
-    color: '#999',
-    marginVertical: 10,
-    fontWeight: 'bold',
+    marginHorizontal: theme.spacing.md,
   },
-  button: {
-    backgroundColor: '#007AFF', 
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  submitButton: {
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
   },
 });
 

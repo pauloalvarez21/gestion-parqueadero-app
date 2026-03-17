@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { theme } from '../theme/theme';
 
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -12,6 +13,7 @@ import SpaceManagementScreen from '../screens/SpaceManagementScreen';
 import TariffsScreen from '../screens/TariffsScreen';
 import VehiclesScreen from '../screens/VehiclesScreen';
 import StatisticsScreen from '../screens/StatisticsScreen';
+import HistoryScreen from '../screens/HistoryScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -24,6 +26,7 @@ export type RootStackParamList = {
   Tarifas: undefined;
   Vehiculos: undefined;
   Estadisticas: undefined;
+  Historial: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -34,54 +37,78 @@ const AppNavigator = () => {
       <Stack.Navigator
         initialRouteName="Login"
         screenOptions={{
-          headerShown: false,
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.text,
+          headerTitleStyle: {
+            fontFamily: theme.fonts.bold,
+            fontSize: 16,
+          },
+          headerShadowVisible: false,
         }}
       >
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen 
+          name="Login" 
+          component={LoginScreen} 
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="Home" 
+          component={HomeScreen} 
+          options={{ headerShown: false }}
+        />
         <Stack.Screen 
           name="Entrada" 
           component={EntryScreen} 
-          options={{ title: 'Registrar Entrada', headerShown: true }} 
+          options={{ title: 'Nueva Entrada' }} 
         />
         <Stack.Screen 
           name="Salida" 
           component={ExitScreen} 
-          options={{ title: 'Registrar Salida', headerShown: true }} 
+          options={{ title: 'Registrar Salida' }} 
         />
         <Stack.Screen 
           name="Tickets" 
           component={TicketsScreen} 
-          options={{ title: 'Tickets Activos', headerShown: true }} 
+          options={{ title: 'Tickets Activos' }} 
         />
         <Stack.Screen 
           name="RegistroUsuario" 
           component={RegisterUserScreen} 
-          options={{ title: 'Crear Usuario', headerShown: true }} 
+          options={{ title: 'Usuarios' }} 
         />
         <Stack.Screen 
           name="Espacios" 
           component={SpaceManagementScreen} 
-          options={{ title: 'Gestionar Espacios', headerShown: true }} 
+          options={{ title: 'Espacios' }} 
         />
         <Stack.Screen 
           name="Tarifas" 
-          component={TariffsScreen} 
-          options={{ title: 'Tarifas del Parqueadero', headerShown: true }} 
+          component={Tarifas} // Note: The import above says TariffsScreen, double checking name in Component call
+          options={{ title: 'Tarifas' }} 
         />
         <Stack.Screen 
           name="Vehiculos" 
           component={VehiclesScreen} 
-          options={{ title: 'Registro de Vehículos', headerShown: true }} 
+          options={{ title: 'Vehículos' }} 
         />
         <Stack.Screen 
           name="Estadisticas" 
           component={StatisticsScreen} 
-          options={{ title: 'Estadísticas del Parqueadero', headerShown: true }} 
+          options={{ title: 'Estadísticas' }} 
+        />
+        <Stack.Screen 
+          name="Historial" 
+          component={HistoryScreen} 
+          options={{ title: 'Historial de Tickets' }} 
         />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
+
+// Fix for component naming mismatch
+const Tarifas = TariffsScreen;
 
 export default AppNavigator;

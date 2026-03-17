@@ -1,15 +1,16 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
   RefreshControl,
-  Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
+import { theme } from '../theme/theme';
+import { AppText } from '../components/AppText';
+import { ScreenContainer } from '../components/ScreenContainer';
+import { GlassCard } from '../components/GlassCard';
 
 interface EstadisticasDTO {
   vehiculosActivos: number;
@@ -57,185 +58,159 @@ const StatisticsScreen = () => {
     }).format(value);
   };
 
-  if (loading && !refreshing) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Cargando estadísticas...</Text>
-      </View>
-    );
-  }
+  const occupancyRate = stats ? (stats.espaciosOcupados / (stats.espaciosDisponibles + stats.espaciosOcupados)) : 0;
 
   return (
-    <ScrollView
-      style={styles.container}
+    <ScreenContainer 
+      scrollable={true}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
       }
     >
-      <View style={styles.content}>
-        <Text style={styles.screenTitle}>Panel de Estadísticas 📊</Text>
+      <View style={styles.header}>
+        <AppText type="black" size={32}>Panel de</AppText>
+        <AppText type="black" size={32} color="primary">Control</AppText>
+      </View>
 
-        {/* Card 1: Ingresos */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Ingresos</Text>
-          <View style={styles.row}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Hoy</Text>
-              <Text style={styles.statValue}>{formatCurrency(stats?.ingresosHoy || 0)}</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Mes Actual</Text>
-              <Text style={[styles.statValue, { color: '#28a745' }]}>
-                {formatCurrency(stats?.ingresosMes || 0)}
-              </Text>
-            </View>
-          </View>
+      {loading && !refreshing ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
-
-        {/* Card 2: Tickets / Movimientos */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Tickets Generados</Text>
-          <View style={styles.row}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Hoy</Text>
-              <Text style={styles.statValue}>{stats?.ticketsHoy || 0}</Text>
+      ) : (
+        <View style={styles.statsContainer}>
+          {/* Ocupación Principal */}
+          <GlassCard style={styles.mainCard}>
+            <View style={styles.cardHeader}>
+              <AppText type="bold" size={16}>Ocupación Actual</AppText>
+              <AppText type="black" color="primary" size={20}>{Math.round(occupancyRate * 100)}%</AppText>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Mes</Text>
-              <Text style={styles.statValue}>{stats?.ticketsMes || 0}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Card 3: Estado de Capacidad */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Ocupación Actual</Text>
-          <View style={styles.occupancyContainer}>
-            <View style={styles.occupancyBarContainer}>
+            <View style={styles.progressBarBg}>
               <View 
                 style={[
-                  styles.occupancyBar, 
+                  styles.progressBarFill, 
                   { 
-                    width: `${stats ? (stats.espaciosOcupados / (stats.espaciosDisponibles + stats.espaciosOcupados)) * 100 : 0}%`,
-                    backgroundColor: (stats && (stats.espaciosOcupados / (stats.espaciosDisponibles + stats.espaciosOcupados)) > 0.8) ? '#FF3B30' : '#007AFF'
+                    width: `${occupancyRate * 100}%`,
+                    backgroundColor: occupancyRate > 0.8 ? theme.colors.error : theme.colors.primary
                   }
                 ]} 
               />
             </View>
-            <View style={styles.row}>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>Libres</Text>
-                <Text style={[styles.statValue, { color: '#28a745' }]}>{stats?.espaciosDisponibles || 0}</Text>
+            <View style={styles.detailsRow}>
+              <View style={styles.detailItem}>
+                <AppText type="bold" size={18} color="success">{stats?.espaciosDisponibles}</AppText>
+                <AppText size={11} color="textDimmed">LIBRES</AppText>
               </View>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>Ocupados</Text>
-                <Text style={[styles.statValue, { color: '#FF3B30' }]}>{stats?.espaciosOcupados || 0}</Text>
+              <View style={styles.detailItem}>
+                <AppText type="bold" size={18} color="error">{stats?.espaciosOcupados}</AppText>
+                <AppText size={11} color="textDimmed">OCUPADOS</AppText>
+              </View>
+              <View style={styles.detailItem}>
+                <AppText type="bold" size={18}>{stats?.vehiculosActivos}</AppText>
+                <AppText size={11} color="textDimmed">EN PLAYA</AppText>
               </View>
             </View>
+          </GlassCard>
+
+          <View style={styles.grid}>
+            <GlassCard style={styles.gridItem}>
+              <AppText type="bold" size={12} color="textDimmed" style={styles.gridLabel}>INGRESOS HOY</AppText>
+              <AppText type="black" size={18} color="success">{formatCurrency(stats?.ingresosHoy || 0)}</AppText>
+            </GlassCard>
+            <View style={{ width: 12 }} />
+            <GlassCard style={styles.gridItem}>
+              <AppText type="bold" size={12} color="textDimmed" style={styles.gridLabel}>TICKETS HOY</AppText>
+              <AppText type="black" size={18}>{stats?.ticketsHoy || 0}</AppText>
+            </GlassCard>
           </View>
-        </View>
 
-        {/* Resumen de Vehículos Activos */}
-        <View style={[styles.sectionCard, styles.activeVehiclesCard]}>
-          <Text style={styles.activeVehiclesText}>
-            Vehículos en el parqueadero ahora: <Text style={styles.activeVehiclesCount}>{stats?.vehiculosActivos || 0}</Text>
-          </Text>
-        </View>
+          <GlassCard style={styles.monthCard}>
+            <AppText type="bold" size={14} color="textSecondary" style={{ marginBottom: 8 }}>RESUMEN MENSUAL</AppText>
+            <View style={styles.monthRow}>
+              <View>
+                <AppText size={11} color="textDimmed">TOTAL INGRESOS</AppText>
+                <AppText type="black" size={24}>{formatCurrency(stats?.ingresosMes || 0)}</AppText>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <AppText size={11} color="textDimmed">TOTAL TICKETS</AppText>
+                <AppText type="black" size={24}>{stats?.ticketsMes || 0}</AppText>
+              </View>
+            </View>
+          </GlassCard>
 
-      </View>
-    </ScrollView>
+          <GlassCard style={styles.infoCard}>
+            <AppText size={13} color="textSecondary" align="center">
+              Desliza hacia abajo para actualizar los datos en tiempo real.
+            </AppText>
+          </GlassCard>
+        </View>
+      )}
+      <View style={{ height: 40 }} />
+    </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
+  header: {
+    marginBottom: theme.spacing.lg,
   },
-  centerContainer: {
-    flex: 1,
+  center: {
+    height: 300,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
-  loadingText: {
-    marginTop: 10,
-    color: '#666',
+  statsContainer: {
+    gap: 12,
   },
-  content: {
-    padding: 20,
+  mainCard: {
+    padding: theme.spacing.lg,
   },
-  screenTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 20,
-    textAlign: 'center',
   },
-  sectionCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
+  progressBarBg: {
+    height: 12,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: 6,
+    overflow: 'hidden',
     marginBottom: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#666',
-    marginBottom: 15,
-    textTransform: 'uppercase',
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 6,
   },
-  row: {
+  detailsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  statBox: {
+  detailItem: {
+    alignItems: 'center',
     flex: 1,
+  },
+  grid: {
+    flexDirection: 'row',
+  },
+  gridItem: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'center',
+  },
+  gridLabel: {
+    marginBottom: 4,
+  },
+  monthCard: {
+    padding: 20,
+  },
+  monthRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  statLabel: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 5,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  occupancyContainer: {
-    marginTop: 10,
-  },
-  occupancyBarContainer: {
-    height: 10,
-    backgroundColor: '#e9ecef',
-    borderRadius: 5,
-    marginBottom: 15,
-    overflow: 'hidden',
-  },
-  occupancyBar: {
-    height: '100%',
-    borderRadius: 5,
-  },
-  activeVehiclesCard: {
-    backgroundColor: '#E3F2FD',
-    alignItems: 'center',
-    borderWidth: 0,
-  },
-  activeVehiclesText: {
-    fontSize: 15,
-    color: '#1976D2',
-    fontWeight: '600',
-  },
-  activeVehiclesCount: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  infoCard: {
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
 });
 

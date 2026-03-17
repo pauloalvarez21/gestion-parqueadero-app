@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   Keyboard,
   TouchableWithoutFeedback,
   PermissionsAndroid,
@@ -19,27 +17,24 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import api from '../services/api';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { theme } from '../theme/theme';
+import { AppText } from '../components/AppText';
+import { ScreenContainer } from '../components/ScreenContainer';
+import { GlassCard } from '../components/GlassCard';
+import { PrimaryButton } from '../components/PrimaryButton';
 
 type EntryScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Entrada'>;
 
 const EntryScreen = () => {
   const navigation = useNavigation<EntryScreenNavigationProp>();
   const [plate, setPlate] = useState('');
-  // Estados para los nuevos campos requeridos por el backend
   const [tipoVehiculo, setTipoVehiculo] = useState<'CARRO' | 'MOTO' | 'CAMION' | 'BICICLETA'>('CARRO');
   const [tipoTarifa, setTipoTarifa] = useState<'POR_MINUTO' | 'POR_HORA' | 'POR_DIA' | 'POR_MES' | 'FRACCION'>('POR_HORA');
   const [loading, setLoading] = useState(false);
 
   const handlePlateChange = (text: string) => {
-    // Esta función formatea la placa automáticamente a 'AAA-123'
-    // Limpia la entrada para permitir solo letras y números
     const cleaned = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
-
-    // Limita la longitud a 6 caracteres (sin contar el guion)
-    if (cleaned.length > 6) {
-      return;
-    }
-
+    if (cleaned.length > 6) return;
     if (cleaned.length > 3) {
       setPlate(`${cleaned.slice(0, 3)}-${cleaned.slice(3)}`);
     } else {
@@ -54,7 +49,7 @@ const EntryScreen = () => {
           PermissionsAndroid.PERMISSIONS.CAMERA,
           {
             title: "Permiso de cámara",
-            message: "La aplicación necesita acceso a tu cámara para poder escanear las placas de los vehículos.",
+            message: "La aplicación necesita acceso a tu cámara para poder escanear las placas.",
             buttonNeutral: "Preguntar luego",
             buttonNegative: "Cancelar",
             buttonPositive: "Aceptar"
@@ -78,28 +73,23 @@ const EntryScreen = () => {
         saveToPhotos: false,
       });
 
-      if (result.didCancel || !result.assets || result.assets.length === 0) {
-        return;
-      }
+      if (result.didCancel || !result.assets || result.assets.length === 0) return;
 
       setLoading(true);
       const uri = result.assets[0].uri;
       if (uri) {
         const recognizedText = await TextRecognition.recognize(uri);
-
-        // Buscamos algo que parezca una placa (3 letras seguidas de 3 o 4 números)
-        // El regex busca patrones como AAA-123 o AAA123
         const plateRegex = /[A-Z]{3}[-]?[0-9]{3,4}/;
         const found = recognizedText.find((text) => plateRegex.test(text.toUpperCase()));
 
         if (found) {
           handlePlateChange(found);
         } else {
-          Alert.alert('Aviso', 'No se pudo detectar una placa clara en la imagen.');
+          Alert.alert('Aviso', 'No se pudo detectar una placa clara.');
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Falló el reconocimiento de texto.');
+      Alert.alert('Error', 'Falló el recognition de texto.');
     } finally {
       setLoading(false);
     }
@@ -107,11 +97,9 @@ const EntryScreen = () => {
 
   const handleRegisterEntry = async () => {
     if (!plate.trim() && tipoVehiculo !== 'BICICLETA') {
-      Alert.alert('Error', 'Por favor ingresa la placa del vehículo');
+      Alert.alert('Error', 'Por favor ingresa la placa');
       return;
     }
-
-    // Validación de longitud sobre la placa formateada (7 caracteres)
     if (tipoVehiculo !== 'BICICLETA' && plate.length !== 7) {
       Alert.alert('Error', 'La placa no tiene el formato correcto (ej: AAA-123).');
       return;
@@ -125,21 +113,14 @@ const EntryScreen = () => {
         tipoTarifa,
       });
 
-      setPlate(''); // Limpiar formulario
+      setPlate('');
       Alert.alert(
         'Éxito',
         `Entrada registrada.\nTicket: ${response.data.codigo || 'N/A'}`,
-        [
-          { text: 'Aceptar', onPress: () => navigation.goBack() }
-        ],
-        { cancelable: false }
+        [{ text: 'Aceptar', onPress: () => navigation.goBack() }]
       );
     } catch (error: any) {
-      console.error('Error al registrar entrada:', error);
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || 'No se pudo registrar la entrada'
-      );
+      Alert.alert('Error', error.response?.data?.message || 'No se pudo registrar la entrada');
     } finally {
       setLoading(false);
     }
@@ -147,191 +128,166 @@ const EntryScreen = () => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Nueva Entrada</Text>
-          <Text style={styles.subtitle}>Ingresa los datos del vehículo</Text>
-
-          <View style={styles.selectorContainer}>
-            <Text style={styles.label}>Tipo de Vehículo</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsRow}>
-              {(['CARRO', 'MOTO', 'CAMION', 'BICICLETA'] as const).map((tipo) => (
-                <TouchableOpacity
-                  key={tipo}
-                  style={[styles.optionButton, tipoVehiculo === tipo && styles.optionSelected]}
-                  onPress={() => setTipoVehiculo(tipo)}
-                >
-                  <Text style={[styles.optionText, tipoVehiculo === tipo && styles.optionTextSelected]}>{tipo}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenContainer>
+          <View style={styles.header}>
+            <AppText type="black" size={32}>Nueva</AppText>
+            <AppText type="black" size={32} color="primary">Entrada</AppText>
+            <AppText color="textSecondary" style={{ marginTop: 4 }}>
+              Registra el ingreso de un vehículo
+            </AppText>
           </View>
 
-          <View style={styles.selectorContainer}>
-            <Text style={styles.label}>Tipo de Tarifa</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsRow}>
-              {(['POR_MINUTO', 'POR_HORA', 'POR_DIA', 'POR_MES', 'FRACCION'] as const).map((tipo) => (
-                <TouchableOpacity
-                  key={tipo}
-                  style={[styles.optionButton, tipoTarifa === tipo && styles.optionSelected]}
-                  onPress={() => setTipoTarifa(tipo)}
-                >
-                  <Text style={[styles.optionText, tipoTarifa === tipo && styles.optionTextSelected]}>
-                    {tipo.replace('POR_', '')}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Placa del Vehículo</Text>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.input}
-                value={plate}
-                onChangeText={handlePlateChange}
-                placeholder="AAA-123"
-                placeholderTextColor="#ccc"
-                autoCapitalize="characters"
-                autoCorrect={false}
-                editable={tipoVehiculo !== 'BICICLETA'}
-                maxLength={7}
-              />
-
-              {tipoVehiculo !== 'BICICLETA' && (
-                <TouchableOpacity style={styles.cameraButton} onPress={handleScanPlate}>
-                  <Text style={styles.cameraIcon}>📷</Text>
-                </TouchableOpacity>
-              )}
+          <GlassCard style={styles.formCard}>
+            <View style={styles.section}>
+              <AppText type="semiBold" size={14} color="textSecondary" style={styles.label}>
+                TIPO DE VEHÍCULO
+              </AppText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsRow}>
+                {(['CARRO', 'MOTO', 'CAMION', 'BICICLETA'] as const).map((tipo) => (
+                  <TouchableOpacity
+                    key={tipo}
+                    activeOpacity={0.7}
+                    style={[styles.optionButton, tipoVehiculo === tipo && styles.optionSelected]}
+                    onPress={() => setTipoVehiculo(tipo)}
+                  >
+                    <AppText 
+                      type="bold" 
+                      size={12} 
+                      color={tipoVehiculo === tipo ? 'text' : 'textDimmed'}
+                    >
+                      {tipo}
+                    </AppText>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
-          </View>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleRegisterEntry}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Registrar Ingreso 🚗</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+            <View style={styles.section}>
+              <AppText type="semiBold" size={14} color="textSecondary" style={styles.label}>
+                TIPO DE TARIFA
+              </AppText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsRow}>
+                {(['POR_MINUTO', 'POR_HORA', 'POR_DIA', 'POR_MES', 'FRACCION'] as const).map((tipo) => (
+                  <TouchableOpacity
+                    key={tipo}
+                    activeOpacity={0.7}
+                    style={[styles.optionButton, tipoTarifa === tipo && styles.optionSelected]}
+                    onPress={() => setTipoTarifa(tipo)}
+                  >
+                    <AppText 
+                      type="bold" 
+                      size={12} 
+                      color={tipoTarifa === tipo ? 'text' : 'textDimmed'}
+                    >
+                      {tipo.replace('POR_', '')}
+                    </AppText>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.section}>
+              <AppText type="semiBold" size={14} color="textSecondary" style={styles.label}>
+                PLACA
+              </AppText>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.plateInput}
+                  value={plate}
+                  onChangeText={handlePlateChange}
+                  placeholder="AAA-123"
+                  placeholderTextColor={theme.colors.textDimmed}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  editable={tipoVehiculo !== 'BICICLETA'}
+                  maxLength={7}
+                />
+                {tipoVehiculo !== 'BICICLETA' && (
+                  <TouchableOpacity 
+                    style={styles.scanButton} 
+                    onPress={handleScanPlate}
+                    activeOpacity={0.7}
+                  >
+                    <AppText size={20}>📷</AppText>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            <PrimaryButton
+              title="REGISTRAR INGRESO"
+              onPress={handleRegisterEntry}
+              isLoading={loading}
+              style={styles.submitButton}
+            />
+          </GlassCard>
+        </ScreenContainer>
       </View>
     </TouchableWithoutFeedback>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 20,
-    justifyContent: 'center',
+  header: {
+    marginBottom: theme.spacing.xl,
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
+  formCard: {
+    padding: theme.spacing.lg,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 5,
+  section: {
+    marginBottom: theme.spacing.lg,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  selectorContainer: {
-    marginBottom: 20,
+  label: {
+    marginBottom: theme.spacing.sm,
+    letterSpacing: 1,
   },
   optionsRow: {
     flexDirection: 'row',
-    marginTop: 8,
-    gap: 10,
-    paddingRight: 20,
+    gap: theme.spacing.sm,
+    paddingRight: theme.spacing.md,
   },
   optionButton: {
+    backgroundColor: theme.colors.surfaceLight,
     paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 20,
+    paddingHorizontal: 16,
+    borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: theme.colors.border,
   },
   optionSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
-  optionText: {
-    color: '#007AFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  optionTextSelected: {
-    color: '#fff',
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#444',
-    marginBottom: 8,
-  },
-  inputRow: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing.sm,
   },
-  input: {
+  plateInput: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 15,
-    fontSize: 18,
-    color: '#333',
-    fontWeight: 'bold',
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    color: theme.colors.text,
+    fontSize: 24,
+    fontFamily: theme.fonts.black,
     textAlign: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  cameraButton: {
-    marginLeft: 10,
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 8,
+  scanButton: {
+    backgroundColor: theme.colors.surfaceLight,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  cameraIcon: {
-    fontSize: 20,
-    color: '#fff',
-  },
-  button: {
-    backgroundColor: '#28a745', // Color verde de "éxito"
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  submitButton: {
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
   },
 });
 

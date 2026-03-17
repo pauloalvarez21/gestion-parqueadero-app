@@ -1,18 +1,19 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   ActivityIndicator,
   RefreshControl,
-  TouchableOpacity,
   Alert
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
+import { theme } from '../theme/theme';
+import { AppText } from '../components/AppText';
+import { ScreenContainer } from '../components/ScreenContainer';
+import { GlassCard } from '../components/GlassCard';
 
-// Interfaces basadas en la documentación del YAML
 interface Vehiculo {
   id: number;
   placa: string;
@@ -32,6 +33,7 @@ interface TicketDTO {
   horaEntrada: string;
   estado: string;
   tipoTarifa: string;
+  creadoPor?: string;
 }
 
 const TicketsScreen = () => {
@@ -44,7 +46,6 @@ const TicketsScreen = () => {
       const response = await api.get('/api/parqueadero/tickets/activos');
       setTickets(response.data);
     } catch (error: any) {
-      console.error('Error fetching tickets:', error);
       Alert.alert('Error', 'No se pudieron cargar los tickets activos');
     } finally {
       setLoading(false);
@@ -52,10 +53,8 @@ const TicketsScreen = () => {
     }
   };
 
-  // Se ejecuta cada vez que la pantalla gana el foco (por ejemplo, al volver de registrar una entrada/salida)
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
       fetchTickets();
     }, [])
   );
@@ -67,160 +66,158 @@ const TicketsScreen = () => {
 
   const formatearFecha = (fechaISO: string) => {
     const fecha = new Date(fechaISO);
-    return fecha.toLocaleString('es-CO');
+    return fecha.toLocaleString('es-CO', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: 'short'
+    });
   };
 
   const renderItem = ({ item }: { item: TicketDTO }) => (
-    <View style={styles.card}>
+    <GlassCard style={styles.ticketCard}>
       <View style={styles.cardHeader}>
-        <Text style={styles.placaText}>{item.vehiculo?.placa || 'N/A'}</Text>
-        <View style={styles.badgeContainer}>
-          <Text style={styles.badgeText}>{item.estado}</Text>
+        <View>
+          <AppText type="black" size={24}>{item.vehiculo?.placa || 'N/A'}</AppText>
+          <View style={styles.typeBadge}>
+            <AppText type="bold" size={10} color="primary">{item.vehiculo?.tipo}</AppText>
+          </View>
+        </View>
+        <View style={styles.statusBadge}>
+          <AppText type="bold" size={10} color="success">{item.estado}</AppText>
         </View>
       </View>
       
       <View style={styles.cardBody}>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Ticket:</Text>
-          <Text style={styles.value}>{item.codigo}</Text>
+        <View style={styles.infoGrid}>
+          <View style={styles.infoItem}>
+            <AppText type="semiBold" size={11} color="textDimmed">TICKET</AppText>
+            <AppText type="bold" size={13}>{item.codigo}</AppText>
+          </View>
+          <View style={styles.infoItem}>
+            <AppText type="semiBold" size={11} color="textDimmed">ESPACIO</AppText>
+            <AppText type="bold" size={13} color="primary">{item.espacio?.codigo || 'SIN ASIGNAR'}</AppText>
+          </View>
         </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Vehículo:</Text>
-          <Text style={styles.value}>{item.vehiculo?.tipo || 'N/A'}</Text>
+
+        <View style={styles.divider} />
+
+        <View style={styles.infoGrid}>
+          <View style={styles.infoItem}>
+            <AppText type="semiBold" size={11} color="textDimmed">TARIFA</AppText>
+            <AppText type="bold" size={13}>{item.tipoTarifa?.replace('POR_', '') || 'N/A'}</AppText>
+          </View>
+          <View style={styles.infoItem}>
+            <AppText type="semiBold" size={11} color="textDimmed">ENTRADA</AppText>
+            <AppText type="bold" size={13}>{formatearFecha(item.horaEntrada)}</AppText>
+          </View>
         </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Espacio:</Text>
-          <Text style={styles.value}>{item.espacio?.codigo || 'Sin Asignar'}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>F. Tarifa:</Text>
-          <Text style={styles.value}>{item.tipoTarifa?.replace('POR_', '') || 'N/A'}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Entrada:</Text>
-          <Text style={styles.value}>{formatearFecha(item.horaEntrada)}</Text>
-        </View>
+
+        {item.creadoPor && (
+          <>
+            <View style={styles.divider} />
+            <AppText size={10} color="textDimmed">
+              Ingresado por: <AppText size={10} type="bold">{item.creadoPor}</AppText>
+            </AppText>
+          </>
+        )}
       </View>
-    </View>
+    </GlassCard>
   );
 
-  if (loading && !refreshing) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Cargando tickets...</Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
+    <ScreenContainer scrollable={false}>
+      <View style={styles.header}>
+        <AppText type="black" size={32}>Tickets</AppText>
+        <AppText type="black" size={32} color="primary">Activos</AppText>
+        <AppText color="textSecondary" style={{ marginTop: 4 }}>
+          {tickets.length} vehículos en el parqueadero
+        </AppText>
+      </View>
+
       <FlatList
         data={tickets}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🎫</Text>
-            <Text style={styles.emptyText}>No hay vehículos parqueados actualmente.</Text>
+            <AppText size={60} style={{ marginBottom: 16 }}>🎫</AppText>
+            <AppText type="bold" size={18} align="center">No hay vehículos activos</AppText>
+            <AppText color="textDimmed" align="center" style={{ marginTop: 8 }}>
+              Parece que el parqueadero está vacío ahora mismo.
+            </AppText>
           </View>
         }
       />
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  loadingText: {
-    marginTop: 10,
-    color: '#666',
-    fontSize: 16,
+  header: {
+    marginBottom: theme.spacing.lg,
   },
   listContainer: {
-    padding: 15,
+    paddingBottom: 40,
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  ticketCard: {
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingBottom: 10,
-    marginBottom: 10,
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  placaText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+  typeBadge: {
+    backgroundColor: 'rgba(0, 163, 255, 0.1)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 4,
   },
-  badgeContainer: {
-    backgroundColor: '#E8F5E9', // Verde claro
+  statusBadge: {
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
-  },
-  badgeText: {
-    color: '#2E7D32', // Verde oscuro
-    fontWeight: 'bold',
-    fontSize: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(52, 199, 89, 0.2)',
   },
   cardBody: {
-    gap: 8,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
+    padding: 12,
   },
-  infoRow: {
+  infoGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  label: {
-    width: 70,
-    fontSize: 14,
-    color: '#888',
-    fontWeight: '600',
-  },
-  value: {
+  infoItem: {
     flex: 1,
-    fontSize: 14,
-    color: '#444',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: 10,
+    opacity: 0.5,
   },
   emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginTop: 100,
-  },
-  emptyIcon: {
-    fontSize: 60,
-    marginBottom: 15,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
   },
 });
 

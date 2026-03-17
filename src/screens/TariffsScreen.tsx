@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   TextInput,
@@ -13,6 +12,11 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
+import { theme } from '../theme/theme';
+import { AppText } from '../components/AppText';
+import { ScreenContainer } from '../components/ScreenContainer';
+import { GlassCard } from '../components/GlassCard';
+import { PrimaryButton } from '../components/PrimaryButton';
 
 interface TarifaDTO {
   id?: number;
@@ -26,7 +30,6 @@ const TariffsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Estados para el formulario de creación/edición
   const [selectedVehiculo, setSelectedVehiculo] = useState<string>('CARRO');
   const [selectedTipo, setSelectedTipo] = useState<string>('POR_HORA');
   const [valor, setValor] = useState('');
@@ -34,12 +37,9 @@ const TariffsScreen = () => {
   const fetchTarifas = async () => {
     try {
       setLoading(true);
-      console.log('Cargando tarifas...');
       const response = await api.get('/api/parqueadero/tarifas');
-      console.log('Tarifas recibidas:', response.data);
       setTarifas(response.data);
     } catch (error: any) {
-      console.error('Error al cargar tarifas:', error);
       Alert.alert('Error', 'No se pudieron cargar las tarifas.');
     } finally {
       setLoading(false);
@@ -54,56 +54,45 @@ const TariffsScreen = () => {
 
   const handleSaveTarifa = async () => {
     if (!valor || isNaN(Number(valor))) {
-      Alert.alert('Aviso', 'Por favor ingresa un valor numérico válido.');
+      Alert.alert('Aviso', 'Ingresa un valor válido.');
       return;
     }
-
     try {
       setActionLoading(true);
-      const payload = {
+      await api.post('/api/parqueadero/tarifas', {
         tipoVehiculo: selectedVehiculo,
         tipoTarifa: selectedTipo,
         valor: parseFloat(valor),
-      };
-      
-      console.log('Guardando tarifa:', payload);
-      await api.post('/api/parqueadero/tarifas', payload);
-      
-      Alert.alert('Éxito', 'Tarifa guardada correctamente.');
+      });
+      Alert.alert('Éxito', 'Tarifa guardada.');
       setValor('');
       fetchTarifas();
     } catch (error: any) {
-      console.error('Error al guardar tarifa:', error);
-      Alert.alert('Error', error.response?.data?.message || 'No se pudo guardar la tarifa.');
+      Alert.alert('Error', error.response?.data?.message || 'Error al guardar.');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleDeleteTarifa = (tipoVehiculo: string, tipoTarifa: string) => {
-    Alert.alert(
-      'Eliminar Tarifa',
-      `¿Estás seguro de que deseas eliminar la tarifa ${tipoTarifa.replace('POR_', '')} para ${tipoVehiculo}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setActionLoading(true);
-              await api.delete(`/api/parqueadero/tarifas/${tipoVehiculo}/${tipoTarifa}`);
-              Alert.alert('Éxito', 'Tarifa eliminada.');
-              fetchTarifas();
-            } catch (error: any) {
-              Alert.alert('Error', 'No se pudo eliminar la tarifa.');
-            } finally {
-              setActionLoading(false);
-            }
+    Alert.alert('Confirmar', '¿Eliminar esta tarifa?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setActionLoading(true);
+            await api.delete(`/api/parqueadero/tarifas/${tipoVehiculo}/${tipoTarifa}`);
+            fetchTarifas();
+          } catch (error: any) {
+            Alert.alert('Error', 'No se pudo eliminar.');
+          } finally {
+            setActionLoading(false);
           }
         }
-      ]
-    );
+      }
+    ]);
   };
 
   const tiposVehiculo = ['CARRO', 'MOTO', 'CAMION', 'BICICLETA'];
@@ -111,234 +100,157 @@ const TariffsScreen = () => {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.container}>
-          
-          {/* Card 1: Crear / Actualizar Tarifa */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Configurar Tarifas 💰</Text>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Tipo de Vehículo</Text>
-              <View style={styles.optionsRow}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-                  {tiposVehiculo.map((v) => (
-                    <TouchableOpacity
-                      key={v}
-                      style={[styles.optionButton, selectedVehiculo === v && styles.optionSelected]}
-                      onPress={() => setSelectedVehiculo(v)}
-                    >
-                      <Text style={[styles.optionText, selectedVehiculo === v && styles.optionTextSelected]}>
-                        {v}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
+      <ScreenContainer scrollable={true}>
+        <View style={styles.header}>
+          <AppText type="black" size={32}>Configurar</AppText>
+          <AppText type="black" size={32} color="primary">Tarifas</AppText>
+        </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Tipo de Tarifa</Text>
-              <View style={styles.optionsRow}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-                  {tiposDisponibles.map((t) => (
-                    <TouchableOpacity
-                      key={t}
-                      style={[styles.optionButton, selectedTipo === t && styles.optionSelected]}
-                      onPress={() => setSelectedTipo(t)}
-                    >
-                      <Text style={[styles.optionText, selectedTipo === t && styles.optionTextSelected]}>
-                        {t.replace('POR_', '')}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Valor ($)</Text>
-              <TextInput
-                style={styles.input}
-                value={valor}
-                onChangeText={setValor}
-                placeholder="Ej: 3000"
-                keyboardType="numeric"
-              />
-            </View>
-
-            <TouchableOpacity 
-              style={[styles.btn, styles.btnPrimary, actionLoading && styles.btnDisabled]}
-              onPress={handleSaveTarifa}
-              disabled={actionLoading}
-            >
-              {actionLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Guardar Tarifa</Text>}
-            </TouchableOpacity>
+        <GlassCard style={styles.formCard}>
+          <View style={styles.inputGroup}>
+            <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>TIPO VEHÍCULO</AppText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+              {tiposVehiculo.map((v) => (
+                <TouchableOpacity
+                  key={v}
+                  activeOpacity={0.7}
+                  style={[styles.optionButton, selectedVehiculo === v && styles.optionSelected]}
+                  onPress={() => setSelectedVehiculo(v)}
+                >
+                  <AppText type="bold" size={11} color={selectedVehiculo === v ? 'text' : 'textDimmed'}>{v}</AppText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
 
-          {/* Card 2: Lista de Tarifas */}
-          <View style={[styles.card, { marginTop: 20 }]}>
-            <Text style={styles.cardTitle}>Tarifas Vigentes 📋</Text>
-            
-            {loading ? (
-              <ActivityIndicator color="#007AFF" style={{ marginVertical: 20 }} />
-            ) : tarifas.length === 0 ? (
-              <Text style={styles.emptyText}>No hay tarifas configuradas.</Text>
-            ) : (
-              tarifas.map((t, index) => (
-                <View key={t.id?.toString() || index.toString()} style={styles.tariffRow}>
-                  <View style={styles.tariffInfo}>
-                    <Text style={styles.vehicleLabel}>{t.tipoVehiculo}</Text>
-                    <Text style={styles.tariffLabel}>{t.tipoTarifa.replace('POR_', '')}</Text>
-                    <Text style={styles.tariffValue}>${t.valor.toLocaleString()}</Text>
+          <View style={styles.inputGroup}>
+            <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>PERIODICIDAD</AppText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+              {tiposDisponibles.map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  activeOpacity={0.7}
+                  style={[styles.optionButton, selectedTipo === t && styles.optionSelected]}
+                  onPress={() => setSelectedTipo(t)}
+                >
+                  <AppText type="bold" size={11} color={selectedTipo === t ? 'text' : 'textDimmed'}>{t.replace('POR_', '')}</AppText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>VALOR ($)</AppText>
+            <TextInput
+              style={styles.input}
+              value={valor}
+              onChangeText={setValor}
+              placeholder="3000"
+              placeholderTextColor={theme.colors.textDimmed}
+              keyboardType="numeric"
+            />
+          </View>
+
+          <PrimaryButton
+            title="ACTUALIZAR TARIFA"
+            onPress={handleSaveTarifa}
+            isLoading={actionLoading}
+          />
+        </GlassCard>
+
+        <View style={styles.listSection}>
+          <AppText type="bold" size={18} style={{ marginBottom: 16 }}>Tarifas Vigentes</AppText>
+          {loading ? (
+            <ActivityIndicator color={theme.colors.primary} />
+          ) : tarifas.length === 0 ? (
+            <AppText color="textDimmed" align="center">No hay tarifas configuradas.</AppText>
+          ) : (
+            tarifas.map((t, index) => (
+              <GlassCard key={index} style={styles.tariffCard}>
+                <View style={styles.tariffMain}>
+                  <View>
+                    <AppText type="black" size={18} color="primary">${t.valor.toLocaleString()}</AppText>
+                    <AppText type="bold" size={12} color="textSecondary">
+                      {t.tipoVehiculo} • {t.tipoTarifa.replace('POR_', '')}
+                    </AppText>
                   </View>
-                  <TouchableOpacity
-                    style={styles.deleteBtn}
+                  <TouchableOpacity 
                     onPress={() => handleDeleteTarifa(t.tipoVehiculo, t.tipoTarifa)}
+                    style={styles.deleteBtn}
                   >
-                    <Text style={styles.deleteBtnText}>🗑️</Text>
+                    <AppText size={18}>🗑️</AppText>
                   </TouchableOpacity>
                 </View>
-              ))
-            )}
-          </View>
-
+              </GlassCard>
+            ))
+          )}
         </View>
-      </ScrollView>
+        <View style={{ height: 40 }} />
+      </ScreenContainer>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
+  header: {
+    marginBottom: theme.spacing.lg,
   },
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 20,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-    textAlign: 'center',
+  formCard: {
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
   },
   inputGroup: {
-    marginBottom: 15,
+    marginBottom: 20,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#444',
     marginBottom: 8,
-  },
-  optionsRow: {
-    marginBottom: 5,
+    letterSpacing: 1,
   },
   horizontalScroll: {
-    gap: 10,
-    paddingRight: 15,
+    gap: 8,
+    paddingRight: 20,
   },
   optionButton: {
+    backgroundColor: theme.colors.surfaceLight,
     paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    borderRadius: theme.borderRadius.sm,
     borderWidth: 1,
-    borderColor: '#007AFF',
-    minWidth: 80,
-    alignItems: 'center',
+    borderColor: theme.colors.border,
   },
   optionSelected: {
-    backgroundColor: '#007AFF',
-  },
-  optionText: {
-    color: '#007AFF',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  optionTextSelected: {
-    color: '#fff',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   input: {
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
     padding: 12,
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: theme.colors.text,
+    fontSize: 20,
+    fontFamily: theme.fonts.black,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  btn: {
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
+  listSection: {
     marginTop: 10,
   },
-  btnPrimary: {
-    backgroundColor: '#28a745',
+  tariffCard: {
+    marginBottom: 10,
+    padding: 16,
   },
-  btnDisabled: {
-    opacity: 0.6,
-  },
-  btnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  tariffRow: {
+  tariffMain: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  tariffInfo: {
-    flex: 1,
-  },
-  vehicleLabel: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  tariffLabel: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  tariffValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginTop: 2,
   },
   deleteBtn: {
-    padding: 10,
-  },
-  deleteBtnText: {
-    fontSize: 20,
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#999',
-    marginVertical: 20,
+    padding: 8,
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    borderRadius: 8,
   },
 });
 

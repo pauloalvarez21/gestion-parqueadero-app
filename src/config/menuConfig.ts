@@ -57,4 +57,11 @@ export const MENU_OPTIONS = [
     roles: ['ADMIN'],
     route: 'Estadisticas',
   },
+  {
+    id: 'historial',
+    title: 'Historial',
+    icon: '📜', 
+    roles: ['ADMIN'],
+    route: 'Historial',
+  },
 ];
