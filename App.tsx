@@ -1,22 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
-import BootSplash from 'react-native-bootsplash';
+import SplashScreen from './src/screens/SplashScreen';
 
 export default function App() {
-  useEffect(() => {
-    const init = async () => {
-      // Aquí podrías cargar datos iniciales, tokens, etc.
-      // Por ahora simulamos una carga de 1.5 segundos para que se vea el splash
-      await new Promise(resolve => setTimeout(() => resolve(true), 1500));
-    };
+  const [showSplash, setShowSplash] = useState(true);
 
-    init().finally(async () => {
-      await BootSplash.hide({ fade: true });
-      console.log('BootSplash hidden');
-    });
-  }, []);
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
 
   return (
     <SafeAreaProvider>
