@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
-import { AppText } from '../components/AppText';
-import { theme } from '../theme/theme';
+import { View, StyleSheet, Animated, Image, Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const LOGO_SIZE = Math.min(SCREEN_WIDTH * 0.5, 200);
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -12,11 +13,10 @@ const SplashScreen = ({ onFinish }: SplashScreenProps) => {
   const scaleAnim = new Animated.Value(0.8);
 
   useEffect(() => {
-    // Animación de entrada
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 500,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
@@ -27,18 +27,15 @@ const SplashScreen = ({ onFinish }: SplashScreenProps) => {
       }),
     ]).start();
 
-    // Simular carga y navegar al main
     const timer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
         onFinish();
       });
-    }, 1500);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -54,10 +51,7 @@ const SplashScreen = ({ onFinish }: SplashScreenProps) => {
           },
         ]}
       >
-        <AppText type="black" size={40} color="primary">
-          Parqueadero
-        </AppText>
-        <View style={styles.loader} />
+        <Image source={require('../../assets/images/splash_logo.png')} style={styles.logo} />
       </Animated.View>
     </View>
   );
@@ -66,20 +60,17 @@ const SplashScreen = ({ onFinish }: SplashScreenProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#0D0D0D',
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
     alignItems: 'center',
   },
-  loader: {
-    marginTop: 40,
-    width: 40,
-    height: 4,
-    backgroundColor: theme.colors.surfaceLight,
-    borderRadius: 2,
-    overflow: 'hidden',
+  logo: {
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
+    resizeMode: 'contain',
   },
 });
 
