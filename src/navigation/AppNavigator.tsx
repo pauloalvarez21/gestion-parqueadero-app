@@ -14,6 +14,7 @@ import TariffsScreen from '../screens/TariffsScreen';
 import VehiclesScreen from '../screens/VehiclesScreen';
 import StatisticsScreen from '../screens/StatisticsScreen';
 import HistoryScreen from '../screens/HistoryScreen';
+import BillingScreen from '../screens/BillingScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -24,6 +25,7 @@ export type RootStackParamList = {
   RegistroUsuario: undefined;
   Espacios: undefined;
   Tarifas: undefined;
+  Billing: undefined;
   Vehiculos: undefined;
   Estadisticas: undefined;
   Historial: undefined;
@@ -83,15 +85,20 @@ const AppNavigator = () => {
           component={SpaceManagementScreen} 
           options={{ title: 'Espacios' }} 
         />
-        <Stack.Screen 
-          name="Tarifas" 
-          component={Tarifas} // Note: The import above says TariffsScreen, double checking name in Component call
-          options={{ title: 'Tarifas' }} 
+        <Stack.Screen
+          name="Tarifas"
+          component={TariffsScreen}
+          options={{ title: 'Tarifas' }}
         />
-        <Stack.Screen 
-          name="Vehiculos" 
-          component={VehiclesScreen} 
-          options={{ title: 'Vehículos' }} 
+        <Stack.Screen
+          name="Billing"
+          component={BillingScreen}
+          options={{ title: 'Facturación' }}
+        />
+        <Stack.Screen
+          name="Vehiculos"
+          component={VehiclesScreen}
+          options={{ title: 'Vehículos' }}
         />
         <Stack.Screen 
           name="Estadisticas" 
@@ -107,8 +114,5 @@ const AppNavigator = () => {
     </NavigationContainer>
   );
 }
-
-// Fix for component naming mismatch
-const Tarifas = TariffsScreen;
 
 export default AppNavigator;

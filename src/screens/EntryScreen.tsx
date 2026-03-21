@@ -4,7 +4,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Keyboard,
   TouchableWithoutFeedback,
   PermissionsAndroid,
@@ -22,6 +21,7 @@ import { AppText } from '../components/AppText';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { GlassCard } from '../components/GlassCard';
 import { PrimaryButton } from '../components/PrimaryButton';
+import useModal from '../hooks/useModal';
 
 type EntryScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Entrada'>;
 
@@ -31,6 +31,7 @@ const EntryScreen = () => {
   const [tipoVehiculo, setTipoVehiculo] = useState<'CARRO' | 'MOTO' | 'CAMION' | 'BICICLETA'>('CARRO');
   const [tipoTarifa, setTipoTarifa] = useState<'POR_MINUTO' | 'POR_HORA' | 'POR_DIA' | 'POR_MES' | 'FRACCION'>('POR_HORA');
   const [loading, setLoading] = useState(false);
+  const { ModalComponent, showSuccess, showError, showInfo } = useModal();
 
   const handlePlateChange = (text: string) => {
     const cleaned = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -56,7 +57,7 @@ const EntryScreen = () => {
           }
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert('Permiso denegado', 'No podemos abrir la cámara sin permisos.');
+          showInfo('Permiso denegado', 'No podemos abrir la cámara sin permisos.');
           return;
         }
       } catch (err) {
@@ -85,11 +86,11 @@ const EntryScreen = () => {
         if (found) {
           handlePlateChange(found);
         } else {
-          Alert.alert('Aviso', 'No se pudo detectar una placa clara.');
+          showInfo('Atención', 'No se pudo detectar una placa clara.');
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Falló el recognition de texto.');
+      showError('Error', 'Falló el reconocimiento de texto.');
     } finally {
       setLoading(false);
     }
@@ -97,11 +98,11 @@ const EntryScreen = () => {
 
   const handleRegisterEntry = async () => {
     if (!plate.trim() && tipoVehiculo !== 'BICICLETA') {
-      Alert.alert('Error', 'Por favor ingresa la placa');
+      showError('Error', 'Por favor ingresa la placa');
       return;
     }
     if (tipoVehiculo !== 'BICICLETA' && plate.length !== 7) {
-      Alert.alert('Error', 'La placa no tiene el formato correcto (ej: AAA-123).');
+      showError('Error', 'La placa no tiene el formato correcto (ej: AAA-123).');
       return;
     }
 
@@ -114,13 +115,13 @@ const EntryScreen = () => {
       });
 
       setPlate('');
-      Alert.alert(
+      showSuccess(
         'Éxito',
         `Entrada registrada.\nTicket: ${response.data.codigo || 'N/A'}`,
-        [{ text: 'Aceptar', onPress: () => navigation.goBack() }]
       );
+      setTimeout(() => navigation.goBack(), 1500);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'No se pudo registrar la entrada');
+      showError('Error', error.response?.data?.message || 'No se pudo registrar la entrada');
     } finally {
       setLoading(false);
     }
@@ -129,6 +130,7 @@ const EntryScreen = () => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        {ModalComponent}
         <ScreenContainer>
           <View style={styles.header}>
             <AppText type="black" size={32}>Nueva</AppText>

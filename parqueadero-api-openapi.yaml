@@ -1,0 +1,810 @@
+openapi: 3.0.0
+info:
+  title: Gestión Parqueadero API
+  description: API para la gestión de un sistema de parqueadero (vehículos, tickets, tarifas, espacios, usuarios).
+  version: 1.2.1
+servers:
+  - url: http://localhost:8082
+    description: Servidor Local
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- Auth DTOs ---
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, OPERADOR, USER]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        role:
+          type: string
+
+    # --- Usuario DTOs ---
+    UsuarioDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        role:
+          type: string
+
+    CambiarRolRequestDTO:
+      type: object
+      required:
+        - newRole
+      properties:
+        newRole:
+          type: string
+          enum: [ADMIN, OPERADOR, USER]
+
+    # --- Parqueadero DTOs ---
+    EntradaRequest:
+      type: object
+      required:
+        - placa
+        - tipoVehiculo
+      properties:
+        placa:
+          type: string
+        tipoVehiculo:
+          type: string
+          enum: [CARRO, MOTO, CAMION, BICICLETA]
+        tipoTarifa:
+          type: string
+          enum: [POR_MINUTO, POR_HORA, POR_DIA, POR_MES, FRACCION]
+
+    SalidaRequest:
+      type: object
+      properties:
+        codigoTicket:
+          type: string
+        placa:
+          type: string
+        observaciones:
+          type: string
+
+    TicketDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        codigo:
+          type: string
+        vehiculo:
+          $ref: "#/components/schemas/VehiculoDTO"
+        espacio:
+          $ref: "#/components/schemas/EspacioDTO"
+        horaEntrada:
+          type: string
+          format: date-time
+        horaSalida:
+          type: string
+          format: date-time
+        tipoTarifa:
+          type: string
+          enum: [POR_MINUTO, POR_HORA, POR_DIA, POR_MES, FRACCION]
+        valorBase:
+          type: number
+        valorAdicional:
+          type: number
+        descuento:
+          type: number
+        valorTotal:
+          type: number
+        estado:
+          type: string
+          enum: [ACTIVO, PAGADO, CANCELADO]
+        observaciones:
+          type: string
+        creadoPor:
+          type: string
+        finalizadoPor:
+          type: string
+        numeroFactura:
+          type: string
+
+    PagoResponse:
+      type: object
+      properties:
+        codigoTicket:
+          type: string
+        horaEntrada:
+          type: string
+          format: date-time
+        horaSalida:
+          type: string
+          format: date-time
+        duracionHoras:
+          type: integer
+          format: int64
+        duracionMinutos:
+          type: integer
+          format: int64
+        valorBase:
+          type: number
+        valorAdicional:
+          type: number
+        descuento:
+          type: number
+        valorTotal:
+          type: number
+        mensaje:
+          type: string
+        creadoPor:
+          type: string
+        finalizadoPor:
+          type: string
+        numeroFactura:
+          type: string
+
+    EspacioDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        codigo:
+          type: string
+        tipoVehiculoPermitido:
+          type: string
+          enum: [CARRO, MOTO, CAMION, BICICLETA]
+        estado:
+          type: string
+          enum: [DISPONIBLE, OCUPADO, RESERVADO, MANTENIMIENTO]
+        tarifaBase:
+          type: number
+        ocupado:
+          type: boolean
+
+    TarifaDTO:
+      type: object
+      properties:
+        tipoVehiculo:
+          type: string
+          enum: [CARRO, MOTO, CAMION, BICICLETA]
+        tipoTarifa:
+          type: string
+          enum: [POR_MINUTO, POR_HORA, POR_DIA, POR_MES, FRACCION]
+        valor:
+          type: number
+
+    EstadisticasDTO:
+      type: object
+      properties:
+        vehiculosActivos:
+          type: integer
+          format: int64
+        espaciosDisponibles:
+          type: integer
+          format: int64
+        espaciosOcupados:
+          type: integer
+          format: int64
+        ingresosHoy:
+          type: number
+        ingresosMes:
+          type: number
+        ticketsHoy:
+          type: integer
+          format: int64
+        ticketsMes:
+          type: integer
+          format: int64
+
+    HistorialDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        placaVehiculo:
+          type: string
+        codigoEspacio:
+          type: string
+        horaEntrada:
+          type: string
+          format: date-time
+        horaSalida:
+          type: string
+          format: date-time
+        duracionMinutos:
+          type: integer
+          format: int64
+        valorTotal:
+          type: number
+        fechaRegistro:
+          type: string
+          format: date-time
+        creadoPor:
+          type: string
+        finalizadoPor:
+          type: string
+        numeroFactura:
+          type: string
+
+    AgregarEspaciosRequest:
+      type: object
+      required:
+        - tipoVehiculo
+        - cantidad
+        - tarifaBase
+      properties:
+        tipoVehiculo:
+          type: string
+          enum: [CARRO, MOTO, CAMION, BICICLETA]
+        cantidad:
+          type: integer
+        tarifaBase:
+          type: number
+
+    EliminarEspaciosRequest:
+      type: object
+      required:
+        - tipoVehiculo
+        - cantidad
+      properties:
+        tipoVehiculo:
+          type: string
+          enum: [CARRO, MOTO, CAMION, BICICLETA]
+        cantidad:
+          type: integer
+
+    # --- Vehiculo DTOs ---
+    VehiculoDTO:
+      type: object
+      required:
+        - placa
+        - tipo
+      properties:
+        id:
+          type: integer
+          format: int64
+        placa:
+          type: string
+        tipo:
+          type: string
+          enum: [CARRO, MOTO, CAMION, BICICLETA]
+        marca:
+          type: string
+        modelo:
+          type: string
+        color:
+          type: string
+        nombrePropietario:
+          type: string
+        telefonoPropietario:
+          type: string
+        fechaRegistro:
+          type: string
+          format: date-time
+
+    ResolucionFacturaDTO:
+      type: object
+      properties:
+        numeroResolucion:
+          type: string
+        fechaResolucion:
+          type: string
+          format: date
+        prefijo:
+          type: string
+        numeroDesde:
+          type: integer
+          format: int64
+        numeroHasta:
+          type: integer
+          format: int64
+        numeroActual:
+          type: integer
+          format: int64
+        fechaInicio:
+          type: string
+          format: date
+        fechaFin:
+          type: string
+          format: date
+        activa:
+          type: boolean
+        mensajePiePagina:
+          type: string
+
+    # --- Entity Tarifa ---
+    Tarifa:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        tipoVehiculo:
+          type: string
+          enum: [CARRO, MOTO, CAMION, BICICLETA]
+        tipoTarifa:
+          type: string
+          enum: [POR_MINUTO, POR_HORA, POR_DIA, POR_MES, FRACCION]
+        valor:
+          type: number
+
+security:
+  - bearerAuth: []
+
+paths:
+  # --- Auth Controller ---
+  /api/auth/register:
+    post:
+      summary: Registrar nuevo usuario
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: Usuario registrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "409":
+          description: El usuario ya existe
+
+  /api/auth/login:
+    post:
+      summary: Iniciar sesión
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  # --- Usuario Controller ---
+  /api/usuarios:
+    get:
+      summary: Listar todos los usuarios (Admin)
+      description: Devuelve una lista de todos los usuarios registrados en el sistema. Requiere rol de ADMIN.
+      tags: [Usuarios]
+      responses:
+        "200":
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UsuarioDTO"
+
+  /api/usuarios/{username}:
+    delete:
+      summary: Eliminar un usuario del sistema (Admin)
+      description: Elimina un usuario por su username. Requiere rol de ADMIN. No se puede eliminar al administrador principal.
+      tags: [Usuarios]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Usuario eliminado exitosamente
+        "404":
+          description: Usuario no encontrado
+        "400":
+          description: No se puede eliminar el administrador principal o datos inválidos
+
+  /api/usuarios/{username}/rol:
+    put:
+      summary: Cambiar rol de usuario (Admin)
+      description: Actualiza el rol de un usuario específico. Requiere rol de ADMIN.
+      tags: [Usuarios]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarRolRequestDTO"
+      responses:
+        "200":
+          description: Rol actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsuarioDTO"
+
+  # --- Parqueadero Controller ---
+  /api/parqueadero/entrada:
+    post:
+      summary: Registrar entrada de vehículo
+      description: Crea un nuevo ticket para un vehículo que ingresa al parqueadero. Si el vehículo no existe, se crea.
+      tags: [Parqueadero]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntradaRequest"
+      responses:
+        "200":
+          description: Entrada registrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketDTO"
+        "400":
+          description: Datos de entrada inválidos o vehículo ya estacionado
+        "404":
+          description: No hay espacios disponibles para el tipo de vehículo
+
+  /api/parqueadero/salida:
+    post:
+      summary: Registrar salida de vehículo y calcular pago
+      tags: [Parqueadero]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalidaRequest"
+      responses:
+        "200":
+          description: Salida registrada y pago calculado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagoResponse"
+
+  /api/parqueadero/tickets/{codigo}:
+    get:
+      summary: Obtener ticket por código
+      tags: [Parqueadero]
+      parameters:
+        - name: codigo
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Detalle del ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketDTO"
+
+  /api/parqueadero/tickets/activos:
+    get:
+      summary: Listar tickets activos
+      tags: [Parqueadero]
+      responses:
+        "200":
+          description: Lista de tickets activos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TicketDTO"
+
+  /api/parqueadero/tarifas:
+    get:
+      summary: Listar tarifas globales (DTO)
+      tags: [Parqueadero]
+      responses:
+        "200":
+          description: Lista de tarifas globales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TarifaDTO"
+    post:
+      summary: Crea o actualiza una tarifa global (Admin)
+      tags: [Parqueadero]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TarifaDTO"
+      responses:
+        "200":
+          description: Tarifa guardada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TarifaDTO"
+
+  /api/parqueadero/tarifas/{tipoVehiculo}/{tipoTarifa}:
+    delete:
+      summary: Eliminar una tarifa global específica (Admin)
+      tags: [Parqueadero]
+      parameters:
+        - name: tipoVehiculo
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [CARRO, MOTO, CAMION, BICICLETA]
+        - name: tipoTarifa
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [POR_MINUTO, POR_HORA, POR_DIA, POR_MES, FRACCION]
+      responses:
+        "204":
+          description: Tarifa eliminada
+
+  /api/parqueadero/espacios:
+    get:
+      summary: Listar todos los espacios
+      tags: [Parqueadero]
+      responses:
+        "200":
+          description: Lista de espacios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EspacioDTO"
+
+  /api/parqueadero/estadisticas:
+    get:
+      summary: Obtener estadísticas del parqueadero
+      tags: [Parqueadero]
+      responses:
+        "200":
+          description: Estadísticas actuales
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EstadisticasDTO"
+
+  /api/parqueadero/historial:
+    get:
+      summary: Listar historial de tickets finalizados
+      tags: [Parqueadero]
+      responses:
+        "200":
+          description: Lista de registros históricos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HistorialDTO"
+
+  /api/parqueadero/espacios/agregar:
+    post:
+      summary: Agregar nuevos espacios (Admin)
+      tags: [Parqueadero]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgregarEspaciosRequest"
+      responses:
+        "200":
+          description: Espacios creados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EspacioDTO"
+
+  /api/parqueadero/espacios/eliminar:
+    delete:
+      summary: Eliminar espacios disponibles (Admin)
+      tags: [Parqueadero]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EliminarEspaciosRequest"
+      responses:
+        "200":
+          description: Espacios eliminados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EspacioDTO"
+
+  /api/parqueadero/facturacion/resolucion:
+    post:
+      summary: Configurar resolución de facturación DIAN (Admin)
+      tags: [Parqueadero]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolucionFacturaDTO"
+      responses:
+        "200":
+          description: Resolución configurada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolucionFacturaDTO"
+
+  /api/parqueadero/facturacion/resolucion/activa:
+    get:
+      summary: Obtener resolución activa
+      tags: [Parqueadero]
+      responses:
+        "200":
+          description: Resolución activa
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolucionFacturaDTO"
+
+  # --- Vehiculo Controller ---
+  /api/vehiculos:
+    get:
+      summary: Listar vehículos
+      tags: [Vehiculos]
+      parameters:
+        - name: placa
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lista de vehículos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VehiculoDTO"
+    post:
+      summary: Registrar nuevo vehículo
+      tags: [Vehiculos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehiculoDTO"
+      responses:
+        "201":
+          description: Vehículo creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehiculoDTO"
+
+  /api/vehiculos/{placa}:
+    get:
+      summary: Obtener vehículo por placa
+      tags: [Vehiculos]
+      parameters:
+        - name: placa
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Detalle del vehículo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehiculoDTO"
+
+  /api/vehiculos/{id}:
+    put:
+      summary: Actualizar vehículo
+      tags: [Vehiculos]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehiculoDTO"
+      responses:
+        "200":
+          description: Vehículo actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehiculoDTO"
+
+  # --- Tarifa Controller (Entidad Directa) ---
+  /api/tarifas:
+    get:
+      summary: Listar todas las tarifas (Entidad)
+      tags: [Tarifas]
+      responses:
+        "200":
+          description: Lista de tarifas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tarifa"
+    post:
+      summary: Guardar o actualizar tarifa (Entidad)
+      tags: [Tarifas]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Tarifa"
+      responses:
+        "200":
+          description: Tarifa guardada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tarifa"

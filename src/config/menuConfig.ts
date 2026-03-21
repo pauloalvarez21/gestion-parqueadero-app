@@ -44,6 +44,13 @@ export const MENU_OPTIONS = [
     route: 'Tarifas',
   },
   {
+    id: 'facturacion',
+    title: 'Facturación',
+    icon: '📄',
+    roles: ['ADMIN'],
+    route: 'Billing',
+  },
+  {
     id: 'vehiculos',
     title: 'Vehículos',
     icon: '🚙', // bi-car-front-fill
@@ -60,7 +67,7 @@ export const MENU_OPTIONS = [
   {
     id: 'historial',
     title: 'Historial',
-    icon: '📜', 
+    icon: '📜',
     roles: ['ADMIN'],
     route: 'Historial',
   },

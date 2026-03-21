@@ -5,7 +5,9 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
-  Alert
+  Alert,
+  TextInput,
+  TouchableOpacity,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
@@ -13,6 +15,7 @@ import { theme } from '../theme/theme';
 import { AppText } from '../components/AppText';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { GlassCard } from '../components/GlassCard';
+import useModal from '../hooks/useModal';
 
 interface Vehiculo {
   id: number;
@@ -31,26 +34,63 @@ interface TicketDTO {
   vehiculo: Vehiculo;
   espacio?: Espacio;
   horaEntrada: string;
+  horaSalida?: string;
   estado: string;
   tipoTarifa: string;
+  valorBase?: number;
+  valorTotal?: number;
   creadoPor?: string;
+  finalizadoPor?: string;
+  observaciones?: string;
 }
 
 const TicketsScreen = () => {
+  const { ModalComponent, showSuccess, showError, showInfo, showWarning } = useModal();
   const [tickets, setTickets] = useState<TicketDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchCodigo, setSearchCodigo] = useState('');
+  const [ticketSeleccionado, setTicketSeleccionado] = useState<TicketDTO | null>(null);
 
   const fetchTickets = async () => {
     try {
       const response = await api.get('/api/parqueadero/tickets/activos');
       setTickets(response.data);
     } catch (error: any) {
-      Alert.alert('Error', 'No se pudieron cargar los tickets activos');
+      showError('Error', 'No se pudieron cargar los tickets activos');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  const buscarTicketPorCodigo = async () => {
+    if (!searchCodigo.trim()) {
+      showInfo('Aviso', 'Ingresa el código del ticket a buscar.');
+      return;
+    }
+    try {
+      setLoading(true);
+      const response = await api.get(`/api/parqueadero/tickets/${searchCodigo.trim()}`);
+      setTicketSeleccionado(response.data);
+      setTickets([]);
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        showInfo('No encontrado', 'No existe un ticket con ese código.');
+        setTicketSeleccionado(null);
+        fetchTickets();
+      } else {
+        showError('Error', 'No se pudo buscar el ticket');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLimpiarBusqueda = () => {
+    setSearchCodigo('');
+    setTicketSeleccionado(null);
+    fetchTickets();
   };
 
   useFocusEffect(
@@ -127,13 +167,85 @@ const TicketsScreen = () => {
 
   return (
     <ScreenContainer scrollable={false}>
+      {ModalComponent}
       <View style={styles.header}>
         <AppText type="black" size={32}>Tickets</AppText>
         <AppText type="black" size={32} color="primary">Activos</AppText>
         <AppText color="textSecondary" style={{ marginTop: 4 }}>
-          {tickets.length} vehículos en el parqueadero
+          {ticketSeleccionado ? 'Ticket encontrado' : `${tickets.length} vehículos en el parqueadero`}
         </AppText>
       </View>
+
+      <GlassCard style={styles.searchCard}>
+        <AppText type="bold" size={12} color="textSecondary" style={styles.sectionLabel}>
+          BUSCAR POR CÓDIGO
+        </AppText>
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchCodigo}
+            onChangeText={setSearchCodigo}
+            placeholder="Ej: TKT-123456"
+            placeholderTextColor={theme.colors.textDimmed}
+            autoCapitalize="characters"
+          />
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={buscarTicketPorCodigo}
+            activeOpacity={0.7}
+          >
+            <AppText size={20}>🔍</AppText>
+          </TouchableOpacity>
+          {(searchCodigo || ticketSeleccionado) && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={handleLimpiarBusqueda}
+              activeOpacity={0.7}
+            >
+              <AppText size={18}>✕</AppText>
+            </TouchableOpacity>
+          )}
+        </View>
+      </GlassCard>
+
+      {ticketSeleccionado && (
+        <GlassCard style={styles.selectedTicketCard}>
+          <View style={styles.selectedHeader}>
+            <AppText type="bold" size={14} color="primary">TICKET ENCONTRADO</AppText>
+            <View style={styles.statusBadge}>
+              <AppText type="bold" size={10} color={ticketSeleccionado.estado === 'ACTIVO' ? 'success' : 'text'}>
+                {ticketSeleccionado.estado}
+              </AppText>
+            </View>
+          </View>
+          <View style={styles.selectedContent}>
+            <View style={styles.infoRow}>
+              <AppText size={12} color="textSecondary">PLACA:</AppText>
+              <AppText type="bold" size={14}>{ticketSeleccionado.vehiculo?.placa}</AppText>
+            </View>
+            <View style={styles.infoRow}>
+              <AppText size={12} color="textSecondary">CÓDIGO:</AppText>
+              <AppText type="bold" size={14}>{ticketSeleccionado.codigo}</AppText>
+            </View>
+            <View style={styles.infoRow}>
+              <AppText size={12} color="textSecondary">ENTRADA:</AppText>
+              <AppText type="bold" size={14}>{formatearFecha(ticketSeleccionado.horaEntrada)}</AppText>
+            </View>
+            {ticketSeleccionado.espacio && (
+              <View style={styles.infoRow}>
+                <AppText size={12} color="textSecondary">ESPACIO:</AppText>
+                <AppText type="bold" size={14} color="primary">{ticketSeleccionado.espacio.codigo}</AppText>
+              </View>
+            )}
+            {ticketSeleccionado.valorTotal !== undefined && ticketSeleccionado.valorTotal !== null && (
+              <View style={styles.infoRow}>
+                <AppText size={12} color="textSecondary">VALOR:</AppText>
+                <AppText type="bold" size={14} color="success">${ticketSeleccionado.valorTotal.toLocaleString()}</AppText>
+              </View>
+            )}
+          </View>
+        </GlassCard>
+      )}
 
       <FlatList
         data={tickets}
@@ -166,6 +278,69 @@ const TicketsScreen = () => {
 const styles = StyleSheet.create({
   header: {
     marginBottom: theme.spacing.lg,
+  },
+  searchCard: {
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  sectionLabel: {
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
+    padding: 12,
+    color: theme.colors.text,
+    fontFamily: theme.fonts.bold,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  searchButton: {
+    backgroundColor: theme.colors.surfaceLight,
+    paddingHorizontal: 16,
+    borderRadius: theme.borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  clearButton: {
+    backgroundColor: theme.colors.surfaceLight,
+    paddingHorizontal: 14,
+    borderRadius: theme.borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  selectedTicketCard: {
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
+  selectedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  selectedContent: {
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.borderRadius.md,
+    padding: 12,
+    gap: 8,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   listContainer: {
     paddingBottom: 40,

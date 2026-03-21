@@ -4,7 +4,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Keyboard,
   TouchableWithoutFeedback,
   PermissionsAndroid,
@@ -21,6 +20,7 @@ import { AppText } from '../components/AppText';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { GlassCard } from '../components/GlassCard';
 import { PrimaryButton } from '../components/PrimaryButton';
+import useModal from '../hooks/useModal';
 
 type ExitScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Salida'>;
 
@@ -30,6 +30,7 @@ const ExitScreen = () => {
   const [codigoTicket, setCodigoTicket] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [loading, setLoading] = useState(false);
+  const { ModalComponent, showSuccess, showError, showInfo } = useModal();
 
   const handlePlateChange = (text: string) => {
     const cleaned = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -55,7 +56,7 @@ const ExitScreen = () => {
           }
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert('Permiso denegado', 'No podemos abrir la cámara sin permisos.');
+          showInfo('Permiso denegado', 'No podemos abrir la cámara sin permisos.');
           return;
         }
       } catch (err) {
@@ -84,11 +85,11 @@ const ExitScreen = () => {
         if (found) {
           handlePlateChange(found);
         } else {
-          Alert.alert('Aviso', 'No se pudo detectar una placa clara.');
+          showInfo('Atención', 'No se pudo detectar una placa clara.');
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Falló el recognition de texto.');
+      showError('Error', 'Falló el reconocimiento de texto.');
     } finally {
       setLoading(false);
     }
@@ -96,7 +97,7 @@ const ExitScreen = () => {
 
   const handleRegisterExit = async () => {
     if (!placa.trim() && !codigoTicket.trim()) {
-      Alert.alert('Error', 'Por favor ingresa la placa o el código del ticket');
+      showError('Error', 'Por favor ingresa la placa o el código del ticket');
       return;
     }
 
@@ -114,13 +115,13 @@ const ExitScreen = () => {
 
       const { valorTotal, duracionHoras, duracionMinutos, mensaje, creadoPor, finalizadoPor } = response.data;
 
-      Alert.alert(
+      showSuccess(
         'Salida Registrada',
         `Mensaje: ${mensaje || 'Pago calculado'}\nTiempo: ${duracionHoras}h ${duracionMinutos}m\nTotal a cobrar: $${valorTotal}${creadoPor ? `\n\nIngresado por: ${creadoPor}` : ''}${finalizadoPor ? `\nFinalizado por: ${finalizadoPor}` : ''}`,
-        [{ text: 'Aceptar', onPress: () => navigation.goBack() }]
       );
+      setTimeout(() => navigation.goBack(), 2000);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'No se pudo registrar la salida');
+      showError('Error', error.response?.data?.message || 'No se pudo registrar la salida');
     } finally {
       setLoading(false);
     }
@@ -129,6 +130,7 @@ const ExitScreen = () => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        {ModalComponent}
         <ScreenContainer>
           <View style={styles.header}>
             <AppText type="black" size={32}>Registrar</AppText>

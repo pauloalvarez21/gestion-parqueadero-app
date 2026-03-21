@@ -17,6 +17,7 @@ import { AppText } from '../components/AppText';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { GlassCard } from '../components/GlassCard';
 import { PrimaryButton } from '../components/PrimaryButton';
+import useModal from '../hooks/useModal';
 
 interface Vehiculo {
   id?: number;
@@ -29,6 +30,7 @@ interface Vehiculo {
 }
 
 const VehiclesScreen = () => {
+  const { ModalComponent, showSuccess, showError, showInfo, showWarning } = useModal();
   const [vehicles, setVehicles] = useState<Vehiculo[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -42,6 +44,7 @@ const VehiclesScreen = () => {
   const [newTelefonoPropietario, setNewTelefonoPropietario] = useState('');
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<Vehiculo | null>(null);
 
   const loadVehicles = async (query = '') => {
     try {
@@ -53,7 +56,7 @@ const VehiclesScreen = () => {
       const response = await api.get(url);
       setVehicles(response.data);
     } catch (error: any) {
-      Alert.alert('Error', 'No se pudieron cargar los vehículos.');
+      showError('Error', 'No se pudieron cargar los vehículos.');
     } finally {
       setLoading(false);
     }
@@ -71,7 +74,7 @@ const VehiclesScreen = () => {
 
   const addVehicle = async () => {
     if (!newPlaca.trim()) {
-      Alert.alert('Error', 'Por favor ingresa la placa.');
+      showError('Error', 'Por favor ingresa la placa.');
       return;
     }
 
@@ -87,8 +90,8 @@ const VehiclesScreen = () => {
       };
 
       await api.post('/api/vehiculos', vehicleData);
-      
-      Alert.alert('Éxito', 'Vehículo registrado con éxito.');
+
+      showSuccess('Éxito', 'Vehículo registrado con éxito.');
       setNewPlaca('');
       setNewMarca('');
       setNewModelo('');
@@ -97,10 +100,70 @@ const VehiclesScreen = () => {
       setShowAddForm(false);
       loadVehicles(searchPlaca);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al registrar el vehículo.');
+      showError('Error', error.response?.data?.message || 'Error al registrar el vehículo.');
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleEditVehicle = (vehicle: Vehiculo) => {
+    setEditingVehicle(vehicle);
+    setNewPlaca(vehicle.placa);
+    setNewTipo(vehicle.tipo as 'CARRO' | 'MOTO' | 'CAMION' | 'BICICLETA');
+    setNewMarca(vehicle.marca || '');
+    setNewModelo(vehicle.modelo || '');
+    setNewNombrePropietario(vehicle.nombrePropietario || '');
+    setNewTelefonoPropietario(vehicle.telefonoPropietario || '');
+    setShowAddForm(true);
+  };
+
+  const updateVehicle = async () => {
+    if (!editingVehicle?.id) {
+      showError('Error', 'No hay un vehículo válido para editar.');
+      return;
+    }
+    if (!newPlaca.trim()) {
+      showError('Error', 'Por favor ingresa la placa.');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const vehicleData = {
+        placa: newPlaca.trim().toUpperCase(),
+        tipo: newTipo,
+        marca: newMarca,
+        modelo: newModelo,
+        nombrePropietario: newNombrePropietario,
+        telefonoPropietario: newTelefonoPropietario,
+      };
+
+      await api.put(`/api/vehiculos/${editingVehicle.id}`, vehicleData);
+
+      showSuccess('Éxito', 'Vehículo actualizado con éxito.');
+      setNewPlaca('');
+      setNewMarca('');
+      setNewModelo('');
+      setNewNombrePropietario('');
+      setNewTelefonoPropietario('');
+      setEditingVehicle(null);
+      setShowAddForm(false);
+      loadVehicles(searchPlaca);
+    } catch (error: any) {
+      showError('Error', error.response?.data?.message || 'Error al actualizar el vehículo.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingVehicle(null);
+    setNewPlaca('');
+    setNewMarca('');
+    setNewModelo('');
+    setNewNombrePropietario('');
+    setNewTelefonoPropietario('');
+    setShowAddForm(false);
   };
 
   return (
@@ -108,6 +171,7 @@ const VehiclesScreen = () => {
       style={{ flex: 1, backgroundColor: theme.colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {ModalComponent}
       <ScreenContainer scrollable={true}>
         <View style={styles.header}>
           <AppText type="black" size={32}>Gestión de</AppText>
@@ -137,19 +201,35 @@ const VehiclesScreen = () => {
           </View>
         </GlassCard>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           activeOpacity={0.7}
-          style={[styles.addBtn, showAddForm && styles.addBtnActive]} 
-          onPress={() => setShowAddForm(!showAddForm)}
+          style={[styles.addBtn, showAddForm && styles.addBtnActive]}
+          onPress={() => {
+            if (showAddForm && editingVehicle) {
+              cancelEdit();
+            } else {
+              setShowAddForm(!showAddForm);
+              if (!showAddForm) {
+                setEditingVehicle(null);
+                setNewPlaca('');
+                setNewMarca('');
+                setNewModelo('');
+                setNewNombrePropietario('');
+                setNewTelefonoPropietario('');
+              }
+            }
+          }}
         >
-          <AppText type="bold" color={showAddForm ? 'error' : 'primary'}>
-            {showAddForm ? '✕ Cancelar Registro' : '➕ Nuevo Vehículo'}
+          <AppText type="bold" color={showAddForm && !editingVehicle ? 'error' : 'primary'}>
+            {showAddForm && !editingVehicle ? '✕ Cancelar Registro' : showAddForm && editingVehicle ? '✕ Cancelar Edición' : '➕ Nuevo Vehículo'}
           </AppText>
         </TouchableOpacity>
 
         {showAddForm && (
           <GlassCard style={styles.formCard}>
-            <AppText type="bold" size={18} style={{ marginBottom: 16 }}>Datos del Vehículo</AppText>
+            <AppText type="bold" size={18} style={{ marginBottom: 16 }}>
+              {editingVehicle ? 'Editar Vehículo' : 'Datos del Vehículo'}
+            </AppText>
             
             <View style={styles.inputGroup}>
               <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>PLACA</AppText>
@@ -216,9 +296,21 @@ const VehiclesScreen = () => {
               />
             </View>
 
+            <View style={styles.inputGroup}>
+              <AppText type="semiBold" size={12} color="textSecondary" style={styles.label}>TELEFONO PROPIETARIO</AppText>
+              <TextInput
+                style={styles.input}
+                value={newTelefonoPropietario}
+                onChangeText={setNewTelefonoPropietario}
+                placeholder="300 123 4567"
+                placeholderTextColor={theme.colors.textDimmed}
+                keyboardType="phone-pad"
+              />
+            </View>
+
             <PrimaryButton
-              title="GUARDAR VEHÍCULO"
-              onPress={addVehicle}
+              title={editingVehicle ? 'ACTUALIZAR VEHÍCULO' : 'GUARDAR VEHÍCULO'}
+              onPress={editingVehicle ? updateVehicle : addVehicle}
               isLoading={actionLoading}
               style={{ marginTop: 8 }}
             />
@@ -240,23 +332,38 @@ const VehiclesScreen = () => {
             vehicles.map((v, index) => (
               <GlassCard key={v.id || index} style={styles.vehicleItem}>
                 <View style={styles.vehicleHeader}>
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <AppText type="black" size={20}>{v.placa}</AppText>
                     <View style={styles.typeBadge}>
                       <AppText type="bold" size={10} color="primary">{v.tipo}</AppText>
                     </View>
                   </View>
-                  <AppText type="semiBold" size={12} color="textDimmed">ID: {v.id}</AppText>
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.editBtn}
+                      onPress={() => handleEditVehicle(v)}
+                      activeOpacity={0.7}
+                    >
+                      <AppText size={16}>✏️</AppText>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                
-                {(v.marca || v.nombrePropietario) && (
+
+                {(v.marca || v.modelo || v.nombrePropietario) && (
                   <View style={styles.vehicleDetails}>
-                    <AppText size={13} color="textSecondary">
-                      {v.marca} {v.modelo}
-                    </AppText>
+                    {(v.marca || v.modelo) && (
+                      <AppText size={13} color="textSecondary">
+                        {v.marca} {v.modelo}
+                      </AppText>
+                    )}
                     {v.nombrePropietario && (
                       <AppText size={12} color="textDimmed" style={{ marginTop: 2 }}>
                         👤 {v.nombrePropietario}
+                      </AppText>
+                    )}
+                    {v.telefonoPropietario && (
+                      <AppText size={12} color="textDimmed" style={{ marginTop: 2 }}>
+                        📞 {v.telefonoPropietario}
                       </AppText>
                     )}
                   </View>
@@ -372,6 +479,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(0, 163, 255, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 163, 255, 0.2)',
   },
   typeBadge: {
     backgroundColor: 'rgba(0, 163, 255, 0.1)',

@@ -17,6 +17,7 @@ import { AppText } from '../components/AppText';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { GlassCard } from '../components/GlassCard';
 import { PrimaryButton } from '../components/PrimaryButton';
+import useModal from '../hooks/useModal';
 
 interface EspacioDTO {
   id: number;
@@ -28,6 +29,7 @@ interface EspacioDTO {
 }
 
 const SpaceManagementScreen = () => {
+  const { ModalComponent, showSuccess, showError, showInfo, showWarning } = useModal();
   const [espacios, setEspacios] = useState<EspacioDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -45,7 +47,7 @@ const SpaceManagementScreen = () => {
       const response = await api.get('/api/parqueadero/espacios');
       setEspacios(response.data);
     } catch (error: any) {
-      Alert.alert('Error', 'No se pudieron cargar los espacios.');
+      showError('Error', 'No se pudieron cargar los espacios.');
     } finally {
       setLoading(false);
     }
@@ -59,7 +61,7 @@ const SpaceManagementScreen = () => {
 
   const handleAggregate = async () => {
     if (!cantidadAgregar || !tarifaBase) {
-      Alert.alert('Aviso', 'Por favor completa los campos.');
+      showInfo('Aviso', 'Por favor completa los campos.');
       return;
     }
     try {
@@ -69,12 +71,12 @@ const SpaceManagementScreen = () => {
         cantidad: parseInt(cantidadAgregar),
         tarifaBase: parseFloat(tarifaBase),
       });
-      Alert.alert('Éxito', 'Espacios agregados.');
+      showSuccess('Éxito', 'Espacios agregados.');
       setCantidadAgregar('');
       setTarifaBase('');
       fetchEspacios();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al agregar.');
+      showError('Error', error.response?.data?.message || 'Error al agregar.');
     } finally {
       setActionLoading(false);
     }
@@ -82,7 +84,7 @@ const SpaceManagementScreen = () => {
 
   const handleDelete = async () => {
     if (!cantidadEliminar) {
-      Alert.alert('Aviso', 'Ingresa la cantidad.');
+      showInfo('Aviso', 'Ingresa la cantidad.');
       return;
     }
     Alert.alert('Confirmar', '¿Eliminar espacios disponibles?', [
@@ -99,11 +101,11 @@ const SpaceManagementScreen = () => {
                 cantidad: parseInt(cantidadEliminar),
               }
             });
-            Alert.alert('Éxito', 'Operación completada.');
+            showSuccess('Éxito', 'Operación completada.');
             setCantidadEliminar('');
             fetchEspacios();
           } catch (error: any) {
-            Alert.alert('Error', 'No se pudieron eliminar.');
+            showError('Error', 'No se pudieron eliminar.');
           } finally {
             setActionLoading(false);
           }
@@ -133,6 +135,7 @@ const SpaceManagementScreen = () => {
       style={{ flex: 1, backgroundColor: theme.colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {ModalComponent}
       <ScreenContainer scrollable={true}>
         <View style={styles.header}>
           <AppText type="black" size={32}>Gestión de</AppText>
@@ -239,7 +242,7 @@ const SpaceManagementScreen = () => {
                         styles.spaceBox,
                         espacio.estado === 'DISPONIBLE' ? styles.spaceAvailable : styles.spaceOccupied,
                       ]}
-                      onPress={() => Alert.alert('Espacio', `${espacio.codigo} - ${espacio.estado}`)}
+                      onPress={() => showInfo('Espacio', `${espacio.codigo} - ${espacio.estado}`)}
                     >
                       <AppText type="black" size={10} color={espacio.estado === 'DISPONIBLE' ? 'success' : 'error'}>
                         {espacio.codigo.split('-').pop()}

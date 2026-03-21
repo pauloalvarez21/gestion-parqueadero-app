@@ -17,6 +17,7 @@ import { AppText } from '../components/AppText';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { GlassCard } from '../components/GlassCard';
 import { PrimaryButton } from '../components/PrimaryButton';
+import useModal from '../hooks/useModal';
 
 interface TarifaDTO {
   id?: number;
@@ -26,6 +27,7 @@ interface TarifaDTO {
 }
 
 const TariffsScreen = () => {
+  const { ModalComponent, showSuccess, showError, showInfo, showWarning } = useModal();
   const [tarifas, setTarifas] = useState<TarifaDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -40,7 +42,7 @@ const TariffsScreen = () => {
       const response = await api.get('/api/parqueadero/tarifas');
       setTarifas(response.data);
     } catch (error: any) {
-      Alert.alert('Error', 'No se pudieron cargar las tarifas.');
+      showError('Error', 'No se pudieron cargar las tarifas.');
     } finally {
       setLoading(false);
     }
@@ -54,7 +56,7 @@ const TariffsScreen = () => {
 
   const handleSaveTarifa = async () => {
     if (!valor || isNaN(Number(valor))) {
-      Alert.alert('Aviso', 'Ingresa un valor válido.');
+      showInfo('Aviso', 'Ingresa un valor válido.');
       return;
     }
     try {
@@ -64,11 +66,11 @@ const TariffsScreen = () => {
         tipoTarifa: selectedTipo,
         valor: parseFloat(valor),
       });
-      Alert.alert('Éxito', 'Tarifa guardada.');
+      showSuccess('Éxito', 'Tarifa guardada.');
       setValor('');
       fetchTarifas();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al guardar.');
+      showError('Error', error.response?.data?.message || 'Error al guardar.');
     } finally {
       setActionLoading(false);
     }
@@ -86,7 +88,7 @@ const TariffsScreen = () => {
             await api.delete(`/api/parqueadero/tarifas/${tipoVehiculo}/${tipoTarifa}`);
             fetchTarifas();
           } catch (error: any) {
-            Alert.alert('Error', 'No se pudo eliminar.');
+            showError('Error', 'No se pudo eliminar.');
           } finally {
             setActionLoading(false);
           }
@@ -103,6 +105,7 @@ const TariffsScreen = () => {
       style={{ flex: 1, backgroundColor: theme.colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {ModalComponent}
       <ScreenContainer scrollable={true}>
         <View style={styles.header}>
           <AppText type="black" size={32}>Configurar</AppText>

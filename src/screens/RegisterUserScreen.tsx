@@ -17,6 +17,7 @@ import { AppText } from '../components/AppText';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { GlassCard } from '../components/GlassCard';
 import { PrimaryButton } from '../components/PrimaryButton';
+import useModal from '../hooks/useModal';
 
 interface UsuarioDTO {
   id?: number;
@@ -26,6 +27,7 @@ interface UsuarioDTO {
 }
 
 const RegisterUserScreen = () => {
+  const { ModalComponent, showSuccess, showError, showInfo, showWarning } = useModal();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -35,6 +37,7 @@ const RegisterUserScreen = () => {
 
   const [users, setUsers] = useState<UsuarioDTO[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [changingRole, setChangingRole] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -48,6 +51,33 @@ const RegisterUserScreen = () => {
     }
   };
 
+  const handleChangeRole = (usernameToChange: string, newRole: 'ADMIN' | 'OPERADOR' | 'USER') => {
+    Alert.alert(
+      'Confirmar',
+      `¿Cambiar el rol de "${usernameToChange}" a ${newRole === 'OPERADOR' ? 'OPERARIO' : newRole === 'ADMIN' ? 'ADMIN' : 'USUARIO'}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Cambiar',
+          onPress: async () => {
+            try {
+              setChangingRole(usernameToChange);
+              await api.put(`/api/usuarios/${usernameToChange}/rol`, {
+                newRole,
+              });
+              showSuccess('Éxito', 'Rol actualizado correctamente.');
+              fetchUsers();
+            } catch (error: any) {
+              showError('Error', error.response?.data?.message || 'No se pudo cambiar el rol.');
+            } finally {
+              setChangingRole(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchUsers();
@@ -56,24 +86,24 @@ const RegisterUserScreen = () => {
 
   const handleDeleteUser = (usernameToDelete: string) => {
     if (!usernameToDelete) {
-      Alert.alert('Error', 'No se puede identificar al usuario para eliminar.');
+      showError('Error', 'No se puede identificar al usuario para eliminar.');
       return;
     }
 
     Alert.alert('Confirmar', `¿Estás seguro de que deseas eliminar al usuario "${usernameToDelete}"?`, [
       { text: 'Cancelar', style: 'cancel' },
-      { 
-        text: 'Eliminar', 
+      {
+        text: 'Eliminar',
         style: 'destructive',
         onPress: async () => {
           try {
-            await api.delete(`/api/usuarios/${usernameToDelete}`); 
-            Alert.alert('Éxito', 'Usuario eliminado correctamente.');
+            await api.delete(`/api/usuarios/${usernameToDelete}`);
+            showSuccess('Éxito', 'Usuario eliminado correctamente.');
             fetchUsers();
           } catch (error: any) {
             console.error('Error al eliminar usuario:', error);
             const msg = error.response?.data?.message || 'No se pudo eliminar el usuario del sistema.';
-            Alert.alert('Error', msg);
+            showError('Error', msg);
           }
         }
       }
@@ -82,11 +112,11 @@ const RegisterUserScreen = () => {
 
   const handleRegister = async () => {
     if (!username.trim() || !password.trim() || !confirmPassword.trim()) {
-      Alert.alert('Error', 'Todos los campos son obligatorios.');
+      showError('Error', 'Todos los campos son obligatorios.');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden.');
+      showError('Error', 'Las contraseñas no coinciden.');
       return;
     }
     setLoading(true);
@@ -98,13 +128,13 @@ const RegisterUserScreen = () => {
         role: role,
         rol: role,
       });
-      Alert.alert('Éxito', 'Usuario registrado correctamente.');
+      showSuccess('Éxito', 'Usuario registrado correctamente.');
       setUsername('');
       setPassword('');
       setConfirmPassword('');
       fetchUsers();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al registrar el usuario.');
+      showError('Error', error.response?.data?.message || 'Error al registrar el usuario.');
     } finally {
       setLoading(false);
     }
@@ -115,6 +145,7 @@ const RegisterUserScreen = () => {
       style={{ flex: 1, backgroundColor: theme.colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {ModalComponent}
       <ScreenContainer scrollable={true}>
         <View style={styles.header}>
           <AppText type="black" size={32}>Gestión de</AppText>
@@ -208,17 +239,32 @@ const RegisterUserScreen = () => {
                   </View>
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <AppText type="bold" size={16}>{u.username}</AppText>
-                    <View style={styles.roleBadge}>
-                      <AppText type="bold" size={9} color="primary">
-                        {u.role || u.rol || 'USER'}
-                      </AppText>
+                    <View style={styles.roleRowSmall}>
+                      {(['OPERADOR', 'ADMIN', 'USER'] as const).map((r) => (
+                        <TouchableOpacity
+                          key={r}
+                          activeOpacity={0.7}
+                          style={[
+                            styles.roleBtnSmall,
+                            (u.role || u.rol) === r && styles.roleActiveSmall,
+                            changingRole === u.username && styles.roleDisabled,
+                          ]}
+                          onPress={() => handleChangeRole(u.username, r)}
+                          disabled={changingRole === u.username}
+                        >
+                          <AppText type="bold" size={8} color={(u.role || u.rol) === r ? 'text' : 'textDimmed'}>
+                            {r === 'OPERADOR' ? 'OPERARIO' : r === 'ADMIN' ? 'ADMIN' : 'USUARIO'}
+                          </AppText>
+                        </TouchableOpacity>
+                      ))}
                     </View>
                   </View>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => handleDeleteUser(u.username)}
                     style={styles.deleteBtn}
+                    disabled={changingRole === u.username}
                   >
-                    <AppText type="bold" size={10} color="error">ELIMINAR</AppText>
+                    <AppText size={14} opacity={0.7}>🗑️</AppText>
                   </TouchableOpacity>
                 </View>
               </GlassCard>
@@ -289,6 +335,28 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
+  roleRowSmall: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 6,
+  },
+  roleBtnSmall: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceLight,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  roleActiveSmall: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  roleDisabled: {
+    opacity: 0.5,
+  },
   listSection: {
     marginTop: 10,
   },
@@ -319,12 +387,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   deleteBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(255, 59, 48, 0.1)',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 59, 48, 0.2)',
+    padding: 6,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 32,
+    minHeight: 32,
   },
 });
 

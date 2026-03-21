@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -18,6 +17,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuthStore } from '../store/useAuthStore';
 import { theme } from '../theme/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import useModal from '../hooks/useModal';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -27,10 +27,11 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading } = useAuthStore();
+  const { ModalComponent, showError } = useModal();
 
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert('Error', 'Por favor ingresa usuario y contraseña');
+      showError('Error', 'Por favor ingresa usuario y contraseña');
       return;
     }
 
@@ -38,15 +39,16 @@ const LoginScreen = () => {
       await login(username, password);
       navigation.navigate('Home');
     } catch (error: any) {
-      Alert.alert(
+      showError(
         'Error de autenticación',
-        error?.response?.data?.message || error.message || 'No se pudo conectar con el servidor'
+        error?.response?.data?.message || error.message || 'No se pudo conectar con el servidor',
       );
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {ModalComponent}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
