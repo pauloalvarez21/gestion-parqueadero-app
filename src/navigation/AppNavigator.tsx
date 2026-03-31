@@ -12,7 +12,7 @@ import RegisterUserScreen from '../screens/RegisterUserScreen';
 import SpaceManagementScreen from '../screens/SpaceManagementScreen';
 import TariffsScreen from '../screens/TariffsScreen';
 import VehiclesScreen from '../screens/VehiclesScreen';
-import StatisticsScreen from '../screens/StatisticsScreen';
+import DashboardScreen from '../screens/DashboardScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import BillingScreen from '../screens/BillingScreen';
 
@@ -27,7 +27,7 @@ export type RootStackParamList = {
   Tarifas: undefined;
   Billing: undefined;
   Vehiculos: undefined;
-  Estadisticas: undefined;
+  Dashboard: undefined;
   Historial: undefined;
 };
 
@@ -100,12 +100,12 @@ const AppNavigator = () => {
           component={VehiclesScreen}
           options={{ title: 'Vehículos' }}
         />
-        <Stack.Screen 
-          name="Estadisticas" 
-          component={StatisticsScreen} 
-          options={{ title: 'Estadísticas' }} 
+        <Stack.Screen
+          name="Dashboard"
+          component={DashboardScreen}
+          options={{ title: 'Dashboard' }}
         />
-        <Stack.Screen 
+        <Stack.Screen
           name="Historial" 
           component={HistoryScreen} 
           options={{ title: 'Historial de Tickets' }} 

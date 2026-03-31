@@ -58,11 +58,11 @@ export const MENU_OPTIONS = [
     route: 'Vehiculos',
   },
   {
-    id: 'estadisticas',
-    title: 'Estadísticas',
+    id: 'dashboard',
+    title: 'Dashboard',
     icon: '📊', // bi-bar-chart-line-fill
     roles: ['ADMIN'],
-    route: 'Estadisticas',
+    route: 'Dashboard',
   },
   {
     id: 'historial',
