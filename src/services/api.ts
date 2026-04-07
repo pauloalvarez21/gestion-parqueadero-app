@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://192.168.1.11:8082';
+const API_URL = 'https://gestion-parqueadero-back.onrender.com';
+// const API_URL = 'http://192.168.1.11:8082';
 
 const api = axios.create({
   baseURL: API_URL,

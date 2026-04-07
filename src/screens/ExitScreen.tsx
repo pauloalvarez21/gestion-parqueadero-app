@@ -7,10 +7,10 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   PermissionsAndroid,
-  Platform
+  Platform,
+  Modal
 } from 'react-native';
-import { launchCamera } from 'react-native-image-picker';
-import TextRecognition from 'react-native-text-recognition';
+import { Camera, CameraType } from 'react-native-camera-kit';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import api from '../services/api';
@@ -30,7 +30,8 @@ const ExitScreen = () => {
   const [codigoTicket, setCodigoTicket] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [loading, setLoading] = useState(false);
-  const { ModalComponent, showSuccess, showError, showInfo } = useModal();
+  const [showScanner, setShowScanner] = useState(false);
+  const { ModalComponent, showSuccess, showError } = useModal();
 
   const handlePlateChange = (text: string) => {
     const cleaned = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -42,21 +43,21 @@ const ExitScreen = () => {
     }
   };
 
-  const handleScanPlate = async () => {
+  const handleScanTicket = async () => {
     if (Platform.OS === 'android') {
       try {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.CAMERA,
           {
             title: "Permiso de cámara",
-            message: "La aplicación necesita acceso a tu cámara para poder escanear las placas.",
+            message: "La aplicación necesita acceso a tu cámara para poder escanear el ticket.",
             buttonNeutral: "Preguntar luego",
             buttonNegative: "Cancelar",
             buttonPositive: "Aceptar"
           }
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          showInfo('Permiso denegado', 'No podemos abrir la cámara sin permisos.');
+          showError('Permiso denegado', 'No podemos abrir la cámara sin permisos.');
           return;
         }
       } catch (err) {
@@ -64,34 +65,15 @@ const ExitScreen = () => {
         return;
       }
     }
+    setShowScanner(true);
+  };
 
-    try {
-      const result = await launchCamera({
-        mediaType: 'photo',
-        cameraType: 'back',
-        quality: 1,
-        saveToPhotos: false,
-      });
-
-      if (result.didCancel || !result.assets || result.assets.length === 0) return;
-
-      setLoading(true);
-      const uri = result.assets[0].uri;
-      if (uri) {
-        const recognizedText = await TextRecognition.recognize(uri);
-        const plateRegex = /[A-Z]{3}[-]?[0-9]{3,4}/;
-        const found = recognizedText.find((text) => plateRegex.test(text.toUpperCase()));
-
-        if (found) {
-          handlePlateChange(found);
-        } else {
-          showInfo('Atención', 'No se pudo detectar una placa clara.');
-        }
-      }
-    } catch (error) {
-      showError('Error', 'Falló el reconocimiento de texto.');
-    } finally {
-      setLoading(false);
+  const handleBarcodeRead = (event: any) => {
+    const code = event.nativeEvent.codeStringValue || event.nativeEvent.data || event.nativeEvent.code;
+    if (code) {
+      setCodigoTicket(code.toUpperCase());
+      setShowScanner(false);
+      showSuccess('Ticket detectado', `Código: ${code}`);
     }
   };
 
@@ -156,13 +138,6 @@ const ExitScreen = () => {
                   autoCorrect={false}
                   maxLength={7}
                 />
-                <TouchableOpacity 
-                  style={styles.scanButton} 
-                  onPress={handleScanPlate}
-                  activeOpacity={0.7}
-                >
-                  <AppText size={20}>📷</AppText>
-                </TouchableOpacity>
               </View>
             </View>
 
@@ -176,15 +151,24 @@ const ExitScreen = () => {
               <AppText type="semiBold" size={14} color="textSecondary" style={styles.label}>
                 CÓDIGO DEL TICKET
               </AppText>
-              <TextInput
-                style={styles.input}
-                value={codigoTicket}
-                onChangeText={setCodigoTicket}
-                placeholder="Ej: TKT-123456"
-                placeholderTextColor={theme.colors.textDimmed}
-                autoCapitalize="characters"
-                autoCorrect={false}
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  value={codigoTicket}
+                  onChangeText={setCodigoTicket}
+                  placeholder="Ej: TKT-123456"
+                  placeholderTextColor={theme.colors.textDimmed}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity 
+                  style={styles.scanButton} 
+                  onPress={handleScanTicket}
+                  activeOpacity={0.7}
+                >
+                  <AppText size={20}>📊</AppText>
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.section}>
@@ -209,6 +193,35 @@ const ExitScreen = () => {
             />
           </GlassCard>
         </ScreenContainer>
+
+        <Modal
+          visible={showScanner}
+          animationType="slide"
+          onRequestClose={() => setShowScanner(false)}
+        >
+          <View style={styles.scannerContainer}>
+            <Camera
+              style={StyleSheet.absoluteFill}
+              cameraType={CameraType.Back}
+              scanBarcode={true}
+              onReadCode={handleBarcodeRead}
+              showFrame={true}
+              laserColor={theme.colors.primary}
+              frameColor={theme.colors.text}
+            />
+            <View style={styles.scannerOverlay}>
+              <TouchableOpacity 
+                style={styles.closeScannerButton} 
+                onPress={() => setShowScanner(false)}
+              >
+                <AppText type="bold" size={18}>CANCELAR ESCANEO</AppText>
+              </TouchableOpacity>
+              <View style={styles.scannerInstructions}>
+                <AppText align="center" type="bold">Apunta al código del ticket</AppText>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </TouchableWithoutFeedback>
   );
@@ -255,6 +268,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   input: {
+    flex: 1,
     backgroundColor: theme.colors.surfaceLight,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
@@ -285,6 +299,35 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     paddingVertical: theme.spacing.lg,
   },
+  scannerContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+  },
+  scannerOverlay: {
+    flex: 1,
+    paddingBottom: 50,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  closeScannerButton: {
+    backgroundColor: theme.colors.error,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: theme.borderRadius.round,
+    marginBottom: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  scannerInstructions: {
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 15,
+    borderRadius: 10,
+    width: '80%',
+  }
 });
 
 export default ExitScreen;

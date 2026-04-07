@@ -6,12 +6,10 @@ import {
   StyleSheet,
   Keyboard,
   TouchableWithoutFeedback,
-  PermissionsAndroid,
   Platform,
-  ScrollView
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
-import { launchCamera } from 'react-native-image-picker';
-import TextRecognition from 'react-native-text-recognition';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import api from '../services/api';
@@ -31,7 +29,7 @@ const EntryScreen = () => {
   const [tipoVehiculo, setTipoVehiculo] = useState<'CARRO' | 'MOTO' | 'CAMION' | 'BICICLETA'>('CARRO');
   const [tipoTarifa, setTipoTarifa] = useState<'POR_MINUTO' | 'POR_HORA' | 'POR_DIA' | 'POR_MES' | 'FRACCION'>('POR_HORA');
   const [loading, setLoading] = useState(false);
-  const { ModalComponent, showSuccess, showError, showInfo } = useModal();
+  const { ModalComponent, showSuccess, showError } = useModal();
 
   const handlePlateChange = (text: string) => {
     const cleaned = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -43,65 +41,12 @@ const EntryScreen = () => {
     }
   };
 
-  const handleScanPlate = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.CAMERA,
-          {
-            title: "Permiso de cámara",
-            message: "La aplicación necesita acceso a tu cámara para poder escanear las placas.",
-            buttonNeutral: "Preguntar luego",
-            buttonNegative: "Cancelar",
-            buttonPositive: "Aceptar"
-          }
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          showInfo('Permiso denegado', 'No podemos abrir la cámara sin permisos.');
-          return;
-        }
-      } catch (err) {
-        console.warn(err);
-        return;
-      }
-    }
-
-    try {
-      const result = await launchCamera({
-        mediaType: 'photo',
-        cameraType: 'back',
-        quality: 1,
-        saveToPhotos: false,
-      });
-
-      if (result.didCancel || !result.assets || result.assets.length === 0) return;
-
-      setLoading(true);
-      const uri = result.assets[0].uri;
-      if (uri) {
-        const recognizedText = await TextRecognition.recognize(uri);
-        const plateRegex = /[A-Z]{3}[-]?[0-9]{3,4}/;
-        const found = recognizedText.find((text) => plateRegex.test(text.toUpperCase()));
-
-        if (found) {
-          handlePlateChange(found);
-        } else {
-          showInfo('Atención', 'No se pudo detectar una placa clara.');
-        }
-      }
-    } catch (error) {
-      showError('Error', 'Falló el reconocimiento de texto.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleRegisterEntry = async () => {
     if (!plate.trim() && tipoVehiculo !== 'BICICLETA') {
       showError('Error', 'Por favor ingresa la placa');
       return;
     }
-    if (tipoVehiculo !== 'BICICLETA' && plate.length !== 7) {
+    if (tipoVehiculo !== 'BICICLETA' && plate.replace('-', '').length !== 6) {
       showError('Error', 'La placa no tiene el formato correcto (ej: AAA-123).');
       return;
     }
@@ -205,15 +150,6 @@ const EntryScreen = () => {
                   editable={tipoVehiculo !== 'BICICLETA'}
                   maxLength={7}
                 />
-                {tipoVehiculo !== 'BICICLETA' && (
-                  <TouchableOpacity 
-                    style={styles.scanButton} 
-                    onPress={handleScanPlate}
-                    activeOpacity={0.7}
-                  >
-                    <AppText size={20}>📷</AppText>
-                  </TouchableOpacity>
-                )}
               </View>
             </View>
 
@@ -277,15 +213,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border,
-  },
-  scanButton: {
-    backgroundColor: theme.colors.surfaceLight,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   submitButton: {
     marginTop: theme.spacing.md,
